@@ -1,4 +1,4 @@
-# PulSe V1.1.1
+# PulSe V1.1.2
 
 Application mobile de préparation de Stories et de consultation des clics LinKs. Docker indépendant ; aucune commande de déploiement automatique. Base V1 récupérée intégralement depuis le Compose Dockhand fourni par le propriétaire, puis versionnée sur une branche distincte.
 
@@ -40,7 +40,7 @@ Les métadonnées proviennent de `/latest-video.json` de LinKs ; aucune deuxièm
 Conserver les valeurs existantes dans Dockhand, jamais dans Git :
 
 ```dotenv
-PULSE_VERSION=1.1.1
+PULSE_VERSION=1.1.2
 PANGOLIN_PROXY_NETWORK=pangolin
 PULSE_TEST_USER=
 PULSE_TEST_PASSWORD=
@@ -51,7 +51,7 @@ PULSE_BRIDGE_TOKEN=
 
 Le Compose conserve `name: links-pulse-test`, l’alias `pulse-story-spike-test`, le réseau externe `pangolin`, le port lié à 127.0.0.1 et `/healthz`. Pangolin termine HTTPS et conserve sa cible `http://pulse-story-spike-test:4173` ; ne pas modifier LinKs, son volume ou ses ressources réseau pour déployer PulSe. Le service et le nom de stack existants doivent rester identiques pour éviter deux conteneurs utilisant le même alias.
 
-`compose.yaml` utilise désormais l’image publique versionnée `ghcr.io/mick7784/links-pulse:${PULSE_VERSION:-1.1.1}`, sans contexte Git ni compilation locale. `pull_policy: always` télécharge l’image lors d’un redéploiement. Le vrai `.env` de Dockhand doit contenir `PULSE_VERSION=1.1.1` ainsi que les secrets préexistants ; `.env.example` n’est qu’un modèle et ne contient aucun secret.
+`compose.yaml` utilise désormais l’image publique versionnée `ghcr.io/mick7784/links-pulse:${PULSE_VERSION:-1.1.2}`, sans contexte Git ni compilation locale. `pull_policy: always` télécharge l’image lors d’un redéploiement. Le vrai `.env` de Dockhand doit contenir `PULSE_VERSION=1.1.1` ainsi que les secrets préexistants ; `.env.example` n’est qu’un modèle et ne contient aucun secret.
 
 Avant toute mise à jour : conserver le Compose et l’image V1, les variables, la cible Pangolin et la possibilité de reconstruire/revenir à la V1. LinKs V1.316 est publiée : s’assurer qu’elle est aussi *déployée* avant de tester les liens YouTube suivis et les statistiques 30 jours. Une fusion de PR ne déploie jamais PulSe. Depuis la V1.1.1, le pipeline de release publie une image GHCR versionnée depuis `main` après validation ; le déploiement reste manuel dans Dockhand.
 
@@ -80,3 +80,12 @@ Le Compose conserve le nom de projet `links-pulse-test`, l'alias Pangolin `pulse
 4. En cas de problème, remettre l'ancien Compose et l'ancienne image. Pour les futures versions, changer `PULSE_VERSION` vers un tag *publié* puis redéployer.
 
 Si GHCR refuse un téléchargement anonyme, vérifier la visibilité publique du package GitHub ou configurer l'authentification du registre dans Dockhand. Le tag ne dépend pas de `latest`.
+
+
+## Correctif PWA V1.1.2
+
+Le manifeste, les icônes, la page hors-ligne et le service worker sont accessibles sans Basic Auth, afin que Chrome Android puisse récupérer les métadonnées d'installation (le manifeste HTML indique également `crossorigin="use-credentials"`). Les pages d'application, scripts et APIs continuent d'exiger l'authentification. Le service worker ne met **jamais** en cache le tableau de bord authentifié, les liens, les images personnelles ou les API.
+
+La CI vérifie le manifeste via l'API Chromium et le service worker, mais le statut « application installée » ne peut être confirmé qu'après un test sur le vrai Samsung, depuis l'URL HTTPS Pangolin et hors navigateur intégré à une autre application. Si Chrome n'offre que « raccourci », vérifier le certificat HTTPS, l'accès public HTTP 200 au manifeste/icônes et les éventuelles protections supplémentaires du proxy.
+
+Pour utiliser cette image depuis Dockhand : `PULSE_VERSION=1.1.2`, puis redéployer la stack existante. Pour revenir en arrière : `PULSE_VERSION=1.1.1`. La charte graphique V1.2 reste un chantier distinct.

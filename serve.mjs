@@ -42,7 +42,15 @@ export function createPulseServer({ user='',password='', linksURL='http://domoti
       if(privateAccess)headers.Authorization='Bearer '+bridgeToken;
       if(data)headers['Content-Type']='application/json';
       const r=await fetcher(destination,{method,headers,body:data?JSON.stringify(data):undefined,redirect:'error',signal:controller.signal,cache:'no-store'});
-      if(!r.ok)throw new Error('LinKs a répondu HTTP '+r.status);
+      if(!r.ok){
+        const error=new Error('LinKs a répondu HTTP '+r.status);error.status=r.status;
+        // Match only known public errors; never relay an upstream body or secret.
+        try{const body=JSON.parse((await boundedBytes(r,8192)).toString('utf8'));
+          error.unsupported=body.error==='Type PulSe invalide';
+          error.changed=body.error==='La dernière vidéo a changé : actualisez PulSe';
+        }catch{}
+        throw error;
+      }
       return JSON.parse((await boundedBytes(r,1024*1024)).toString('utf8'));
     }finally {clearTimeout(timeout)}
   }
@@ -67,7 +75,7 @@ export function createPulseServer({ user='',password='', linksURL='http://domoti
   }
   const handler=async (req,res)=>{
     let route;try{route=new URL(req.url,'http://localhost')}catch{return responseJson(res,400,{error:'Adresse invalide.'})}
-    if(req.method==='GET'&&route.pathname==='/healthz')return responseJson(res,200,{status:'ok',version:'1.1.0'});
+    if(req.method==='GET'&&route.pathname==='/healthz')return responseJson(res,200,{status:'ok',version:'1.1.1'});
     if(user&&!sameSecret(req.headers.authorization,authValue)) {
       res.writeHead(401,{...HEADERS,'WWW-Authenticate':'Basic realm="PulSe", charset="UTF-8"'});return res.end('Connexion requise.');
     }
@@ -99,7 +107,11 @@ export function createPulseServer({ user='',password='', linksURL='http://domoti
           try {
             const result=await requestLinks('/api/pulse/story-link',{method:'POST',data:{type:body.type,id:item.id},privateAccess:true});
             if(httpURL(result.url))return responseJson(res,200,{url:result.url,tracked:true});
-          }catch{ /* Do not silently publish an untracked link when tracking is expected. */ }
+          }catch(error){
+            if(error.status===401||error.status===403)return responseJson(res,503,{code:'BRIDGE_AUTH',error:'LinKs refuse la connexion sécurisée. Vérifiez la configuration de la liaison.'});
+            if(body.type==='youtube'&&(error.unsupported||error.status===404))return responseJson(res,503,{code:'VIDEO_BRIDGE_REQUIRED',error:'La connexion LinKs doit être mise à jour pour préparer une Story YouTube.'});
+            if(error.changed)return responseJson(res,409,{code:'VIDEO_CHANGED',error:'La dernière vidéo a changé. Actualisez PulSe puis sélectionnez la nouvelle vidéo.'});
+          }
           return responseJson(res,503,{error:'Impossible de créer le lien suivi LinKs. Réessaie plus tard.'});
         }
         if(body.type==='independent')return responseJson(res,503,{error:'Génération du lien suivi indisponible : réessaie plus tard.'});

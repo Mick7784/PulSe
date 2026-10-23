@@ -1,4 +1,4 @@
-# PulSe V1.1
+# PulSe V1.1.1
 
 Application mobile de préparation de Stories et de consultation des clics LinKs. Docker indépendant ; aucune commande de déploiement automatique. Base V1 récupérée intégralement depuis le Compose Dockhand fourni par le propriétaire, puis versionnée sur une branche distincte.
 
@@ -11,6 +11,23 @@ Application mobile de préparation de Stories et de consultation des clics LinKs
 - L’éditeur apparaît immédiatement sous le contenu choisi. Photo/vidéo du téléphone possible pour ce contenu ; aucun bloc « Photo personnelle » séparé. Les photos restent locales, les images sont préparées en JPEG 1080 × 1920 sans recadrer leur contenu ; les vidéos sont partagées dans leur format original (sans promesse de conversion ou de compatibilité Instagram).
 - Statistiques 7/30 jours : clics du jour, total de période, clics Story inclus dans ce total, graphique daté/chiffré et tableau accessible. Pas de « Stories déclarées », pas de métrique « Offres actives » dupliquée. Pas de top publications : attribution par publication non démontrée.
 - Installation PWA : invite navigateur quand disponible, instructions Safari/iOS ou Android sinon, état installé en mode autonome et sur événement `appinstalled`. Une installation antérieure ne peut pas être détectée universellement depuis tous les onglets et navigateurs.
+
+## Parcours de publication
+
+Touchez « Préparer et publier la Story » sur la vidéo (ou choisissez une offre/un lien). Un parcours en quatre étapes s’ouvre directement sous le contenu :
+
+1. **Préparer le visuel** : miniature transformée en JPEG Story 1080 × 1920 avec fond flou, ou média local du téléphone.
+2. **Copier le lien suivi** : bouton de copie ; si le navigateur refuse, sélection du texte et confirmation de copie manuelle. Le partage s’active après cette étape.
+3. **Partager le média** : fichier seul remis au partage système, ou enregistrement/import depuis la galerie. L’annulation conserve le brouillon.
+4. **Publier dans Instagram** : ajouter manuellement le sticker Lien, coller l’URL, publier, puis revenir et confirmer avoir effectué ces actions. La fin du parcours est une déclaration manuelle en mémoire, pas une preuve Instagram et pas un compteur dans les statistiques.
+
+La préparation du visuel est indépendante de celle du lien. Si LinKs est trop ancien, le visuel reste disponible et un message indique que la liaison doit être mise à jour, avec un bouton de nouvelle tentative. Le partage suivi et la fin du parcours restent bloqués tant que le lien n’est pas prêt/copié. L’authentification et les erreurs de vidéo devenue ancienne sont également distinguées.
+
+## Charte graphique et graphique mobile
+
+La référence visuelle fournie est appliquée aux surfaces navy/noir, contours cyan lumineux, cartes en dégradé et boutons bleu électrique. Ses anciens logo graphique et badge de version ne sont pas repris : le mot PulSe reste seul dans l’en-tête et la version au footer.
+
+Les valeurs de l’histogramme sont blanches, contrastées et rendues à **15 pixels réels minimum** dans la recette mobile (pas réduites par une grande vue SVG). La période 30 jours se parcourt horizontalement ; toucher une barre ou la parcourir au clavier affiche son jour et sa valeur en texte. Le tableau accessible reste disponible. Aucune donnée de démonstration n’est injectée dans l’application.
 
 ## Prérequis LinKs
 

@@ -24,7 +24,7 @@ test('startup refuses missing authentication, short bridge token and unauthentic
  await assert.rejects(startFromEnvironment({PULSE_REQUIRE_AUTH:'0',PULSE_BRIDGE_TOKEN:'short'}),/32 caractères/);
 });
 test('bridge: strict 7/30 stats, immutable video request, safe visual proxy and CSRF',async()=>{
- let wrongStats=false,privateCalls=0,fail=false,videoMissing=false;
+ let wrongStats=false,privateCalls=0,fail=false,videoMissing=false,videoError=false;
  const fetcher=async(url,options={})=>{
   const u=new URL(url);if(u.hostname==='i.ytimg.com'){assert.equal(options.headers,undefined);return new Response(Buffer.from('image'),{headers:{'Content-Type':'image/jpeg'}})}
   assert.equal(u.hostname,'links.test');
@@ -33,7 +33,7 @@ test('bridge: strict 7/30 stats, immutable video request, safe visual proxy and 
   if(u.pathname==='/latest-video.json')return json(videoMissing?null:{url:'https://www.youtube.com/watch?v='+id,title:'Vidéo',thumbnail:'https://i.ytimg.com/vi/'+id+'/hqdefault.jpg',privateKey:'must-not-leak'});
   if(u.pathname==='/api/pulse/links')return json({links:[]});
   if(u.pathname==='/api/pulse/stats'){const n=wrongStats?7:Number(u.searchParams.get('days')),d=days(n),total=d.reduce((s,x)=>s+x.clicks,0);return json({period:n,total,today:d.at(-1).clicks,last7:d.slice(-7).reduce((s,x)=>s+x.clicks,0),stories:3,days:d})}
-  if(u.pathname==='/api/pulse/story-link'){assert.deepEqual(JSON.parse(options.body),{type:'youtube',id});return json({url:'https://links.example/abc123xyz',token:'never-return-token'})}
+  if(u.pathname==='/api/pulse/story-link'){if(videoError)return new Response(JSON.stringify({error:'Type PulSe invalide'}),{status:400});assert.deepEqual(JSON.parse(options.body),{type:'youtube',id});return json({url:'https://links.example/abc123xyz',token:'never-return-token'})}
   return new Response('{}',{status:404});
  };
  const server=createPulseServer({linksURL:'http://links.test',bridgeToken:'s'.repeat(64),user:'admin',password:'long-password-123',fetcher}),base=await open(server);
@@ -46,6 +46,7 @@ test('bridge: strict 7/30 stats, immutable video request, safe visual proxy and 
   for(const p of ['days=8','days=','days=7&days=30'])assert.equal((await get('/api/stats?'+p)).status,400);
   wrongStats=true;const bad=await(await get('/api/stats?days=30')).json();assert.equal(bad.available,false);assert.equal(bad.total,undefined);wrongStats=false;
   const link=await(await post({type:'youtube',id,url:'https://evil.test'})).json();assert.deepEqual(link,{url:'https://links.example/abc123xyz',tracked:true});
+  videoError=true;const unsupported=await post({type:'youtube',id});assert.equal(unsupported.status,503);assert.equal((await unsupported.json()).code,'VIDEO_BRIDGE_REQUIRED');videoError=false;
   assert.equal((await post({type:'youtube',id:'other-id'})).status,404);
   assert.equal((await post({type:'youtube',id},{Origin:'https://evil.test'})).status,403);
   assert.equal((await post({type:'youtube',id},{'X-PulSe-Request':''})).status,403);

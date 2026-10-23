@@ -8,7 +8,7 @@ const close=s=>new Promise(r=>s.close(r));
 (async()=>{
  const {createPulseServer}=await import('../serve.mjs');
  const id='abcdefghijk',png=await readFile(resolve(__dirname,'../icon-192.png'));
- let failStats=false;
+ let failStats=false,failVideoLink=false;
  const fake=http.createServer(async(req,res)=>{
   const u=new URL(req.url,'http://localhost');res.setHeader('Content-Type','application/json');
   const json=x=>res.end(JSON.stringify(x));
@@ -16,7 +16,7 @@ const close=s=>new Promise(r=>s.close(r));
   if(u.pathname==='/latest-video.json')return json({title:'Vidéo de test · une maison connectée plus simple',url:'https://youtu.be/'+id,thumbnail:'https://i.ytimg.com/vi/'+id+'/hqdefault.jpg'});
   if(u.pathname==='/api/pulse/links')return json({links:Array.from({length:35},(_,i)=>({id:'link'+i,name:'Lien suivi '+i,category:i===34?'Éclairage':'Domotique',url:'https://partner.example/'+i,enabled:true,archived:false}))});
   if(u.pathname==='/api/pulse/stats'){if(failStats){res.statusCode=503;return json({})}const n=Number(u.searchParams.get('days')||7),days=Array.from({length:n},(_,i)=>({date:new Date(Date.UTC(2026,9,24-n+i)).toISOString().slice(0,10),clicks:i}));return json({period:n,total:days.reduce((s,d)=>s+d.clicks,0),today:n-1,last7:days.slice(-7).reduce((s,d)=>s+d.clicks,0),stories:3,days})}
-  if(u.pathname==='/api/pulse/story-link')return json({url:'https://links.example/a12345678'});
+  if(u.pathname==='/api/pulse/story-link'){if(failVideoLink){res.statusCode=400;return json({error:'Type PulSe invalide'})}return json({url:'https://links.example/a12345678'})}
   if(u.pathname==='/uploads/test.png'){res.setHeader('Content-Type','image/png');return res.end(png)}
   res.statusCode=404;json({});
  });
@@ -32,22 +32,25 @@ const close=s=>new Promise(r=>s.close(r));
    Object.defineProperty(navigator,'clipboard',{value:{writeText:value=>{window.__clipboard.push(value);return window.__rejectCopy?Promise.reject(Error('denied')):Promise.resolve()}}});
   });
   const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
+  await mkdir(process.env.PULSE_SCREENSHOT_DIR||resolve(__dirname,'../../screenshots'),{recursive:true});
   await page.goto(base);await page.waitForFunction(()=>document.getElementById('stat-today').textContent==='6');
   assert.equal(await page.locator('header h1').textContent(),'PulSe');assert.equal(await page.locator('header img,header svg,.pill').count(),0);
   assert.equal(await page.locator('#story-panel').isVisible(),false);assert.equal(await page.locator('#stat-today').isVisible(),true);
   assert.equal(await page.getByText('Photo personnelle',{exact:true}).count(),0);assert.equal(await page.getByText('Stories déclarées',{exact:true}).count(),0);
   await page.getByRole('button',{name:'30 jours',exact:true}).click();await page.waitForFunction(()=>document.getElementById('stat-today').textContent==='29');
   assert.equal(await page.locator('#stat-period').textContent(),'435');assert.equal(await page.locator('#daily-values tr').count(),30);assert.equal(await page.locator('#chart rect.bar').count(),30);
+  const graph=await page.locator('#chart').evaluate(el=>({scroll:el.scrollWidth,width:el.clientWidth,font:parseFloat(getComputedStyle(el.querySelector('.bar-value')).fontSize)*el.querySelector('svg').getScreenCTM().a}));assert.ok(graph.scroll>graph.width);assert.ok(graph.font>=14.5);await page.locator('.chart-hit').last().focus();assert.match(await page.locator('#chart-selection').textContent(),/29 clics/);
+  await page.screenshot({path:resolve(process.env.PULSE_SCREENSHOT_DIR||resolve(__dirname,'../../screenshots'),'pulse-mobile-30-days.png'),fullPage:true});
   failStats=true;await page.getByRole('button',{name:'Actualiser les données'}).click();await page.waitForFunction(()=>document.getElementById('chart-caption').textContent.includes('ne répond pas'));
   assert.equal(await page.locator('#stat-today').textContent(),'—');assert.equal(await page.locator('#chart rect').count(),0);
   failStats=false;await page.getByRole('button',{name:'7 jours',exact:true}).click();await page.waitForFunction(()=>document.getElementById('stat-today').textContent==='6');
   const out=process.env.PULSE_SCREENSHOT_DIR||resolve(__dirname,'../../screenshots');await mkdir(out,{recursive:true});
-  await page.screenshot({path:resolve(out,'pulse-mobile-dashboard.png'),fullPage:true});
+  const weekFont=await page.locator('#chart .bar-value').first().evaluate(el=>parseFloat(getComputedStyle(el).fontSize)*el.ownerSVGElement.getScreenCTM().a);assert.ok(weekFont>=14.5);await page.screenshot({path:resolve(out,'pulse-mobile-dashboard.png'),fullPage:true});
   await page.getByRole('button',{name:'Préparer une Story',exact:true}).click();assert.equal(await page.locator('#tracked-links button').count(),35);
   assert.equal(await page.locator('#campaigns small').count(),0);assert.equal(await page.locator('#tracked-links .chain-icon').count(),35);
   await page.locator('#link-search').fill('Éclairage');assert.equal(await page.locator('#tracked-links button').count(),1);
   await page.getByRole('button',{name:/Lien suivi 34/}).click();await page.waitForFunction(()=>document.getElementById('story-link').value==='https://links.example/a12345678');
-  await page.locator('#story-media').setInputFiles({name:'phone.png',mimeType:'image/png',buffer:png});await page.waitForFunction(()=>!document.getElementById('share').disabled);
+  await page.locator('#story-media').setInputFiles({name:'phone.png',mimeType:'image/png',buffer:png});await page.waitForFunction(()=>!document.getElementById('preview').hidden&&!document.getElementById('copy').disabled);assert.equal(await page.locator('#share').isDisabled(),true);
   assert.deepEqual(await page.locator('#preview').evaluate(img=>[img.naturalWidth,img.naturalHeight]),[1080,1920]);
   await page.locator('#copy').click();await page.locator('#share').click();
   assert.deepEqual(await page.evaluate(()=>window.__shareCalls[0].keys),['files']);assert.equal(await page.evaluate(()=>window.__shareCalls[0].active),true);
@@ -55,26 +58,36 @@ const close=s=>new Promise(r=>s.close(r));
   assert.equal(await page.locator('#share').isEnabled(),true);await page.evaluate(()=>window.__rejectCopy=true);await page.locator('#copy').click();await page.waitForFunction(()=>document.getElementById('story-status').textContent.includes('appui long'));
   assert.equal(await page.locator('#story-link').evaluate(e=>e.selectionEnd-e.selectionStart),'https://links.example/a12345678'.length);
   await page.locator('#story-media').setInputFiles({name:'phone.mp4',mimeType:'video/mp4',buffer:Buffer.from('fake-video-for-sharing-contract')});await page.waitForFunction(()=>document.getElementById('media-name').textContent.includes('Vidéo originale'));
-  await page.evaluate(()=>window.__cancelShare=false);await page.locator('#share').click();assert.equal(await page.evaluate(()=>window.__shareCalls.at(-1).type),'video/mp4');
-  await page.locator('#link-search').fill('');await page.locator('#latest-video button').click();await page.waitForFunction(()=>!document.getElementById('preview').hidden&&!document.getElementById('share').disabled);
+  await page.locator('#manual-copy').click();await page.evaluate(()=>window.__cancelShare=false);await page.locator('#share').click();assert.equal(await page.evaluate(()=>window.__shareCalls.at(-1).type),'video/mp4');
+  await page.locator('#link-search').fill('');await page.locator('#latest-video button').click();await page.waitForFunction(()=>!document.getElementById('preview').hidden&&!document.getElementById('copy').disabled);
   assert.deepEqual(await page.locator('#preview').evaluate(img=>[img.naturalWidth,img.naturalHeight]),[1080,1920]);
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
-  assert.equal(await page.locator('#latest-video + #editor').count(),1);await page.locator('#link-search').fill('Éclairage');await page.screenshot({path:resolve(out,'pulse-mobile-story.png'),fullPage:true});
+  assert.equal(await page.locator('#latest-video + #editor').count(),1);assert.equal(await page.locator('.publication-steps>li').count(),4);await page.locator('#link-search').fill('Éclairage');await page.screenshot({path:resolve(out,'pulse-mobile-story.png'),fullPage:true});
   // Standalone detection and installation cancellation/acceptance use browser event contracts.
   await page.locator('#install').click();assert.equal(await page.locator('#install-help').isVisible(),true);
   await page.evaluate(()=>{const e=new Event('beforeinstallprompt');e.prompt=()=>Promise.resolve();e.userChoice=Promise.resolve({outcome:'dismissed'});dispatchEvent(e)});
   await page.locator('#install').click();assert.match(await page.locator('#install-help').textContent(),/annulée/);assert.equal(await page.locator('#install').isEnabled(),true);
   await page.evaluate(()=>dispatchEvent(new Event('appinstalled')));assert.equal(await page.locator('#install').isDisabled(),true);assert.equal(await page.locator('#install').textContent(),'App installée');
+  // A legacy LinKs backend can display metadata but cannot create a YouTube Story link.
+  failVideoLink=true;await page.locator('#latest-video button').click();await page.waitForFunction(()=>document.getElementById('story-status').textContent.includes('mise à jour')&&!document.getElementById('preview').hidden);
+  assert.equal(await page.locator('#share').isDisabled(),true);assert.equal(await page.locator('#copy').isDisabled(),true);assert.equal(await page.locator('#retry-link').isVisible(),true);await page.locator('#download').click();assert.equal(await page.locator('#publication-check').isDisabled(),true);await page.screenshot({path:resolve(out,'pulse-video-bridge-missing.png'),fullPage:true});
+  failVideoLink=false;await page.locator('#retry-link').click();await page.waitForFunction(()=>!document.getElementById('copy').disabled);assert.equal(await page.locator('#publication-check').isDisabled(),true);await page.locator('#latest-video button').click();await page.waitForFunction(()=>!document.getElementById('copy').disabled&&!document.getElementById('preview').hidden);
+  await page.evaluate(()=>{window.__rejectCopy=false;window.__cancelShare=true});await page.locator('#copy').click();await page.locator('#share').click();await page.waitForFunction(()=>document.getElementById('story-status').textContent.includes('annulé'));
+  assert.equal(await page.locator('#publication-check').isDisabled(),true);assert.equal(await page.locator('#confirm-publication').isDisabled(),true);
+  await page.evaluate(()=>window.__cancelShare=false);await page.locator('#share').click();await page.waitForFunction(()=>!document.getElementById('publication-check').disabled);
+  assert.equal(await page.locator('#confirm-publication').isDisabled(),true);assert.equal(await page.locator('#publication-receipt').textContent(),'');
+  await page.locator('#publication-check').check();await page.locator('#confirm-publication').click();assert.match(await page.locator('#publication-receipt').textContent(),/déclarée par vous/);assert.equal(await page.locator('#stat-story').textContent(),'3');
   // Rapid selections may not let an earlier asynchronous image overwrite the new choice.
   await page.route('**/api/story-link',async route=>{const data=route.request().postDataJSON();if(data.type==='youtube')await new Promise(r=>setTimeout(r,200));await route.fulfill({json:{url:'https://links.example/'+(data.type==='youtube'?'video1234':'offer1234'),tracked:true}})});
-  await page.locator('#latest-video button').click();assert.equal(await page.locator('#story-media').isDisabled(),true);await page.locator('#campaigns button').click();await page.waitForFunction(()=>document.getElementById('story-link').value.endsWith('offer1234')&&!document.getElementById('share').disabled);await new Promise(r=>setTimeout(r,250));assert.match(await page.locator('#story-link').inputValue(),/offer1234$/);
+  await page.locator('#latest-video button').click();assert.equal(await page.locator('#story-media').isEnabled(),true);await page.locator('#campaigns button').click();await page.waitForFunction(()=>document.getElementById('story-link').value.endsWith('offer1234')&&!document.getElementById('preview').hidden);await new Promise(r=>setTimeout(r,250));assert.match(await page.locator('#story-link').inputValue(),/offer1234$/);
+  await page.locator('#latest-video button').click();await page.locator('#story-media').setInputFiles({name:'phone-before-link.mp4',mimeType:'video/mp4',buffer:Buffer.from('video-before-link')});await page.waitForFunction(()=>document.getElementById('story-link').value.endsWith('video1234')&&!document.getElementById('video-preview').hidden);assert.match(await page.locator('#media-name').textContent(),/Vidéo originale/);
   for(const width of [320,768,1280]){await page.setViewportSize({width,height:900});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true)}
   await page.screenshot({path:resolve(out,'pulse-desktop-story.png'),fullPage:true});
   await page.getByRole('button',{name:'Préparer une Story',exact:true}).click();await page.screenshot({path:resolve(out,'pulse-desktop-dashboard.png'),fullPage:true});
   // The worker must never cache private API data or media.
   await page.evaluate(()=>navigator.serviceWorker.ready);const cached=await page.evaluate(async()=>{const results=[];for(const key of await caches.keys()){for(const r of await(await caches.open(key)).keys())results.push(new URL(r.url).pathname)}return results});assert.ok(cached.length>0);assert.equal(cached.some(p=>p.startsWith('/api/')),false);
   assert.deepEqual(errors,[]);await context.close();
-  console.log('PASS: mobile/desktop, catalogue, real-shaped 7/30 stats, unavailable state, 1080x1920, photo/video sharing contract, cancellation, copy fallback, installation events, races, private cache exclusion. Fixtures only; no physical Samsung test.');
+  console.log('PASS: publication steps, legacy bridge diagnostic/retry, explicit manual confirmation, 15px mobile chart values, 30-day scrolling/touch detail, 1080x1920, photo/video and races, activation, cancellation, clipboard fallback, PWA and private cache exclusion. Fixtures only; no physical Samsung test.');
  }finally{if(browser)await browser.close();await close(pulse);await close(fake)}
 })().catch(e=>{console.error(e);process.exitCode=1});
 

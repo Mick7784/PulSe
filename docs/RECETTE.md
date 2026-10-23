@@ -4,6 +4,12 @@
 
 Préserver la stack V1 et son image. Utiliser une origine HTTPS de test et une instance LinKs de test disposant de l’extension V1.1. Les secrets restent dans les variables Dockhand. Ne pas remplacer l’alias Pangolin de la stack utilisée tant que cette recette n’est pas acceptée. Aucun déploiement n’a été effectué par ce chantier.
 
+## Correctif 1.1.1
+
+Contrôler sur téléphone la présence du parcours visuel → copie → partage → sticker/publication → déclaration manuelle. Un partage résolu ou un retour d’Instagram ne termine jamais automatiquement le parcours. Le lien doit exister et être copié pour terminer ; avec LinKs V1.315 sans extension YouTube, vérifier le message explicite, le visuel encore préparé, le partage bloqué et la nouvelle tentative après mise à jour validée de la liaison.
+
+Sur l’histogramme : valeurs blanches lisibles sans zoom en 7 jours, balayage horizontal en 30 jours, jour/valeur au toucher et dans le tableau. Aucun défilement horizontal de la page entière.
+
 ## Samsung / Chrome puis PWA
 
 Noter téléphone, Android, Chrome et version Instagram. Répéter sur la V1 et la V1.1 pour comparer le comportement réel.

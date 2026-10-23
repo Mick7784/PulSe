@@ -1,7 +1,7 @@
 name: links-pulse-test
 services:
   pulse:
-    image: pulse-test:1.1.0
+    image: pulse-test:1.1.1
     pull_policy: build
     build: .
     restart: unless-stopped

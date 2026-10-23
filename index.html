@@ -5,22 +5,31 @@
 </head><body><main class="shell">
 <header class="topbar"><h1>PulSe</h1><div class="header-actions"><button id="install" type="button">Installer l’app</button><button id="refresh" class="icon-button" type="button" aria-label="Actualiser les données">↻</button></div></header>
 <p id="install-help" class="install-help" role="status" hidden></p>
-<section aria-label="Préparation des Stories"><button class="story-toggle" id="story-toggle" type="button" aria-expanded="false" aria-controls="story-panel"><span>Préparer une Story</span><span aria-hidden="true">⌄</span></button>
+<section class="story-zone" aria-label="Préparation des Stories"><button class="story-toggle" id="story-toggle" type="button" aria-label="Préparer une Story" aria-expanded="false" aria-controls="story-panel"><span>Préparer une Story</span><span aria-hidden="true">⌄</span></button>
 <div id="story-panel" class="story-panel" hidden>
 <div class="section-heading"><div><p class="eyebrow">À la une</p><h2>Dernière vidéo YouTube</h2></div></div><div id="latest-video" class="video-card"></div>
 <div class="section-heading spaced"><h2>Offres actives</h2><span id="offers-count" class="count">—</span></div><div id="campaigns" class="selection-list"></div>
 <div class="section-heading spaced"><h2>Liens suivis</h2><span id="links-count" class="count">—</span></div>
 <label class="search-label"><span class="sr-only">Rechercher un lien par nom ou catégorie</span><input id="link-search" type="search" placeholder="Rechercher un nom, une catégorie…" autocomplete="off"></label><div id="tracked-links" class="selection-list"></div>
-<section id="editor" class="editor" aria-labelledby="editor-title" hidden><p class="eyebrow">Votre Story</p><h3 id="editor-title"></h3>
-<label class="file-button" for="story-media">Choisir une photo ou une vidéo du téléphone</label><input id="story-media" type="file" disabled accept="image/*,video/*"><p id="media-name" class="small-note"></p>
-<img id="preview" class="story-preview" alt="Aperçu du visuel Story" hidden><video id="video-preview" class="story-preview" controls playsinline preload="metadata" hidden></video>
-<label for="story-link" class="small-note">Lien court suivi · à coller dans le sticker Lien</label><input id="story-link" class="story-link" readonly>
-<div class="actions"><button id="copy" type="button" disabled>Copier le lien</button><button id="share" type="button" disabled>Partager vers Instagram</button><a id="download" class="secondary" hidden>Enregistrer le média</a></div>
-<p class="small-note">Copiez le lien, choisissez Instagram dans le partage, puis ajoutez le sticker Lien. Vous pouvez aussi enregistrer le média et l’importer depuis Instagram.</p></section>
-<p class="work-status" id="story-status" role="status" aria-live="polite"></p></div></section>
+<section id="editor" class="editor" aria-labelledby="editor-title" hidden>
+<div class="editor-heading"><div><p class="eyebrow">Publication guidée</p><h3 id="editor-title" tabindex="-1"></h3></div><span id="publication-state" class="publication-state">En préparation</span></div>
+<p id="story-status" class="work-status" role="status" aria-live="polite"></p><button id="retry-link" class="secondary" type="button" hidden>Réessayer la préparation du lien</button>
+<ol class="publication-steps">
+<li id="step-media" data-state="current"><div class="step-heading"><span class="step-number">1</span><h4>Préparer le visuel</h4><span id="media-state" class="step-state">Préparation…</span></div>
+<img id="preview" class="story-preview" alt="Aperçu du visuel Story" hidden><video id="video-preview" class="story-preview" controls playsinline preload="metadata" hidden></video><p id="media-name" class="small-note"></p>
+<label class="file-button" for="story-media">Choisir une photo ou une vidéo du téléphone</label><input id="story-media" type="file" accept="image/*,video/*"></li>
+<li id="step-copy"><div class="step-heading"><span class="step-number">2</span><h4>Copier le lien suivi</h4><span id="copy-state" class="step-state">En attente</span></div>
+<label for="story-link" class="small-note">À coller dans le sticker Lien d’Instagram</label><input id="story-link" class="story-link" readonly><button id="copy" type="button" disabled>Copier le lien</button><button id="manual-copy" class="secondary" type="button" hidden>J’ai copié le lien manuellement</button></li>
+<li id="step-share"><div class="step-heading"><span class="step-number">3</span><h4>Partager le média</h4><span id="share-state" class="step-state">En attente</span></div>
+<div class="actions"><button id="share" type="button" disabled>Partager vers Instagram</button><a id="download" class="secondary" hidden>Enregistrer le média</a></div><p class="small-note">Choisissez Instagram puis Story dans le partage. Si Instagram n’est pas proposé, enregistrez le média puis importez-le depuis la galerie.</p></li>
+<li id="step-publish"><div class="step-heading"><span class="step-number">4</span><h4>Publier dans Instagram</h4><span id="publish-state" class="step-state">À faire dans Instagram</span></div>
+<p class="small-note">Ajoutez le sticker <strong>Lien</strong>, collez l’URL copiée, puis publiez la Story. Revenez ensuite ici pour terminer.</p>
+<label class="publication-check"><input id="publication-check" type="checkbox" disabled> J’ai ajouté le sticker Lien et publié ma Story dans Instagram.</label><button id="confirm-publication" type="button" disabled>Terminer cette publication</button><p id="publication-receipt" class="small-note" role="status"></p></li>
+</ol></section>
+</div></section>
 <section class="dashboard" aria-label="Statistiques LinKs"><div class="dashboard-heading"><div><p class="eyebrow">Votre activité</p><h2>Statistiques</h2></div><div class="period-picker" role="group" aria-label="Période des statistiques"><button type="button" data-period="7" aria-pressed="true">7 jours</button><button type="button" data-period="30" aria-pressed="false">30 jours</button></div></div>
 <p id="connection-status" class="subtle" role="status">Connexion à LinKs…</p>
 <div class="metrics"><article class="metric"><span>Clics aujourd’hui</span><strong id="stat-today">—</strong></article><article class="metric"><span id="period-label">Clics sur 7 jours</span><strong id="stat-period">—</strong></article><article class="metric"><span>Clics Story</span><strong id="stat-story">—</strong><small>Inclus dans les clics de la période</small></article></div>
-<article class="chart-card"><div class="chart-heading"><h3>Clics quotidiens</h3><span id="chart-caption">Chargement…</span></div><div id="chart" class="chart-placeholder"></div><details id="daily-details" hidden><summary>Voir les jours et les valeurs</summary><table><caption class="sr-only">Clics quotidiens LinKs</caption><thead><tr><th scope="col">Jour</th><th scope="col">Clics</th></tr></thead><tbody id="daily-values"></tbody></table></details></article>
+<article class="chart-card"><div class="chart-heading"><h3>Clics quotidiens</h3><span id="chart-caption">Chargement…</span></div><div id="chart" class="chart-placeholder" tabindex="0" role="region" aria-label="Histogramme des clics quotidiens"></div><p id="chart-help" class="chart-help" hidden>Faites glisser le graphique pour parcourir les 30 jours.</p><p id="chart-selection" class="chart-selection" aria-live="polite"></p><details id="daily-details" hidden><summary>Voir les jours et les valeurs</summary><table><caption class="sr-only">Clics quotidiens LinKs</caption><thead><tr><th scope="col">Jour</th><th scope="col">Clics</th></tr></thead><tbody id="daily-values"></tbody></table></details></article>
 <p class="footnote">Source : compteurs LinKs. Les clics ne correspondent pas à des visiteurs uniques ni à une confirmation de publication Instagram.</p></section>
-<footer><span>Connecté à LinKs</span><span>PulSe · V1.1.0</span></footer></main></body></html>
+<footer><span>Connecté à LinKs</span><span>PulSe · V1.1.1</span></footer></main></body></html>

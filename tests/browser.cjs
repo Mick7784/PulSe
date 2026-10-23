@@ -34,6 +34,18 @@ const close=s=>new Promise(r=>s.close(r));
   const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
   await mkdir(process.env.PULSE_SCREENSHOT_DIR||resolve(__dirname,'../../screenshots'),{recursive:true});
   await page.goto(base);await page.waitForFunction(()=>document.getElementById('stat-today').textContent==='6');
+  // Real Chromium manifest/installability API: do not simulate beforeinstallprompt here.
+  await page.evaluate(()=>navigator.serviceWorker.ready);
+  const cdp=await context.newCDPSession(page);
+  const manifestState=await cdp.send('Page.getAppManifest');
+  assert.equal(manifestState.errors.length,0,'Chromium rejected PulSe manifest: '+JSON.stringify(manifestState.errors));
+  const appManifest=JSON.parse(manifestState.data);
+  assert.equal(appManifest.display,'standalone');
+  assert.equal(appManifest.start_url,'/');
+  assert.deepEqual(appManifest.icons.map(icon=>icon.sizes),['192x192','512x512']);
+  const installability=await cdp.send('Page.getInstallabilityErrors');
+  assert.deepEqual(installability.installabilityErrors,[],'Chromium PWA installation errors');
+  await cdp.detach();
   assert.equal(await page.locator('header h1').textContent(),'PulSe');assert.equal(await page.locator('header img,header svg,.pill').count(),0);
   assert.equal(await page.locator('#story-panel').isVisible(),false);assert.equal(await page.locator('#stat-today').isVisible(),true);
   assert.equal(await page.getByText('Photo personnelle',{exact:true}).count(),0);assert.equal(await page.getByText('Stories déclarées',{exact:true}).count(),0);

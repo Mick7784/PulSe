@@ -19,6 +19,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
+      - name: Validate version-pinned GHCR Compose
+        env:
+          PULSE_TEST_USER: ci
+          PULSE_TEST_PASSWORD: ci-validation-password
+        run: |
+          set -euo pipefail
+          docker compose --env-file .env.example config --quiet
+          test "$(docker compose --env-file .env.example config --images)" = "ghcr.io/mick7784/links-pulse:1.1.1"
       - name: Unit and server tests
         run: node --test tests/*.test.mjs
       - name: Install test browser

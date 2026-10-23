@@ -31,7 +31,7 @@ Les valeurs de l’histogramme sont blanches, contrastées et rendues à **15 pi
 
 ## Prérequis LinKs
 
-LinKs V1.315 possède la passerelle privée de base. La PR séparée `feat/pulse-v1.1-stats` ajoute `GET /api/pulse/stats?days=7|30` et le type `youtube` de `POST /api/pulse/story-link`. **La préparation YouTube et les statistiques sur 30 jours nécessitent cette extension validée et publiée séparément.** PulSe reste explicite si elle est absente et ne fabrique pas de données ou de lien non suivi.
+LinKs V1.315 possède la passerelle privée de base. LinKs V1.316 ajoute `GET /api/pulse/stats?days=7|30` et le type `youtube` de `POST /api/pulse/story-link`. **La préparation YouTube et les statistiques sur 30 jours nécessitent LinKs V1.316 effectivement déployée.** PulSe reste explicite si elle est absente et ne fabrique pas de données ou de lien non suivi.
 
 Les métadonnées proviennent de `/latest-video.json` de LinKs ; aucune deuxième clé YouTube ni connexion Meta n’est ajoutée. À la préparation explicite d’une vidéo, LinKs crée/réutilise un lien privé avec destination fixée à cette vidéo, catégorie YouTube et source Instagram Story. Les jetons des anciennes offres et des anciens liens restent réutilisés. Ce suivi est par contenu/source, pas par publication Instagram.
 
@@ -40,6 +40,7 @@ Les métadonnées proviennent de `/latest-video.json` de LinKs ; aucune deuxièm
 Conserver les valeurs existantes dans Dockhand, jamais dans Git :
 
 ```dotenv
+PULSE_VERSION=1.1.1
 PANGOLIN_PROXY_NETWORK=pangolin
 PULSE_TEST_USER=
 PULSE_TEST_PASSWORD=
@@ -50,9 +51,9 @@ PULSE_BRIDGE_TOKEN=
 
 Le Compose conserve `name: links-pulse-test`, l’alias `pulse-story-spike-test`, le réseau externe `pangolin`, le port lié à 127.0.0.1 et `/healthz`. Pangolin termine HTTPS et conserve sa cible `http://pulse-story-spike-test:4173` ; ne pas modifier LinKs, son volume ou ses ressources réseau pour déployer PulSe. Le service et le nom de stack existants doivent rester identiques pour éviter deux conteneurs utilisant le même alias.
 
-`compose.yaml` s’utilise depuis une copie Git de ce dépôt (contexte de build local). Pour une stack Dockhand basée uniquement sur du texte, un Compose autonome `dockerfile_inline` est livré dans l’archive de livraison ; il contient exactement les sources de cette version, sans secret. Ne pas coller le Compose avec `build: .` dans une stack vide sans source Git.
+`compose.yaml` utilise désormais l’image publique versionnée `ghcr.io/mick7784/links-pulse:${PULSE_VERSION:-1.1.1}`, sans contexte Git ni compilation locale. `pull_policy: always` télécharge l’image lors d’un redéploiement. Le vrai `.env` de Dockhand doit contenir `PULSE_VERSION=1.1.1` ainsi que les secrets préexistants ; `.env.example` n’est qu’un modèle et ne contient aucun secret.
 
-Avant toute mise à jour : conserver le Compose et l’image V1, les variables, la cible Pangolin et la possibilité de reconstruire/revenir à la V1. Publier et déployer l’extension LinKs uniquement après sa validation, puis tester PulSe sur un environnement distinct. Aucune fusion de PR ne déploie PulSe : sa CI ne publie aucune image.
+Avant toute mise à jour : conserver le Compose et l’image V1, les variables, la cible Pangolin et la possibilité de reconstruire/revenir à la V1. LinKs V1.316 est publiée : s’assurer qu’elle est aussi *déployée* avant de tester les liens YouTube suivis et les statistiques 30 jours. Une fusion de PR ne déploie jamais PulSe. Depuis la V1.1.1, le pipeline de release publie une image GHCR versionnée depuis `main` après validation ; le déploiement reste manuel dans Dockhand.
 
 ## Sécurité et comportement dégradé
 
@@ -64,6 +65,18 @@ En cas de statistiques incomplètes, de période incompatible ou d’erreur : va
 
 `node --test tests/*.test.mjs` : catalogue, authentification, restrictions du proxy, contrats 7/30 jours et vidéo, absence de repli non suivi, instructions PWA. Aucun paquet de production requis.
 
-`NODE_PATH=<dossier node_modules contenant playwright> node tests/browser.cjs` : parcours mobile/desktop avec serveurs et données de test locaux. `CHROMIUM_PATH` facultatif pour utiliser un Chrome installé ; `PULSE_SCREENSHOT_DIR` choisit le dossier des captures. La CI installe le navigateur de test et construit/vérifie l’image Docker isolée, sans publication.
+`NODE_PATH=<dossier node_modules contenant playwright> node tests/browser.cjs` : parcours mobile/desktop avec serveurs et données de test locaux. `CHROMIUM_PATH` facultatif pour utiliser un Chrome installé ; `PULSE_SCREENSHOT_DIR` choisit le dossier des captures. La CI installe le navigateur de test et construit/vérifie une image Docker isolée. Sur `main`, après validation, elle publie sur GHCR et crée une release GitHub si cette version n’existe pas déjà ; aucun déploiement VPS n’est exécuté.
 
 Voir [la recette physique](docs/RECETTE.md) et [les changements](docs/V1.1.md). Un test de navigateur simulant Web Share ne prouve ni l’ouverture effective de Story ni la publication sur Samsung.
+
+
+## Mise à jour par image GHCR
+
+Le Compose conserve le nom de projet `links-pulse-test`, l'alias Pangolin `pulse-story-spike-test`, le réseau externe et les restrictions du conteneur. Il ne contient plus de `build:` local. Pour mettre à jour PulSe dans Dockhand :
+
+1. Sauvegarder le Compose, les valeurs de l'environnement et l'image actuelle (pour retour arrière). Ne pas copier les secrets dans Git.
+2. Remplacer le Compose de la stack existante par `compose.yaml` de la branche `main` ; ajouter `PULSE_VERSION=1.1.1` au `.env` réel de la stack, sans modifier les autres variables.
+3. Redéployer **la stack existante** ; ne pas créer un deuxième service sur le même alias. Docker récupère l'image versionnée depuis GHCR. Vérifier le healthcheck et la cible Pangolin.
+4. En cas de problème, remettre l'ancien Compose et l'ancienne image. Pour les futures versions, changer `PULSE_VERSION` vers un tag *publié* puis redéployer.
+
+Si GHCR refuse un téléchargement anonyme, vérifier la visibilité publique du package GitHub ou configurer l'authentification du registre dans Dockhand. Le tag ne dépend pas de `latest`.

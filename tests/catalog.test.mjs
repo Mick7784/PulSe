@@ -17,8 +17,8 @@ test('PulSe imports only active promotional offers, never classic or featured li
 test('private bridge provides only enabled and non-archived tracked links',()=>{
  const tracked=normalizeTrackedLinks({links:[
   {id:'tracked-1',name:'Produit partenaire',category:'Tech',url:'https://example.com/tracked',enabled:true,archived:false},
-  {id:'tracked-2',name:'Désactivé',url:'https://example.com/disabled',enabled:false,archived:false},
-  {id:'tracked-3',name:'Archivé',url:'https://example.com/archived',enabled:true,archived:true},
+  {id:'tracked-2',name:'DÃ©sactivÃ©',url:'https://example.com/disabled',enabled:false,archived:false},
+  {id:'tracked-3',name:'ArchivÃ©',url:'https://example.com/archived',enabled:true,archived:true},
   {id:'tracked-4',name:'Invalide',url:'javascript:alert(1)',enabled:true,archived:false}
  ]});
  assert.deepEqual(tracked.map(x=>x.id),['tracked-1']);
@@ -29,7 +29,15 @@ test('visual proxy rejects untrusted paths and dynamic URLs',()=>{
  assert.equal(safeImageRef('/assets/bg-1.webp'),true);
  for(const bad of ['https://evil.com/x.jpg','/uploads/../etc/passwd','/api/admin','system:dark','/uploads/x?yes=1'])assert.equal(safeImageRef(bad),false);
 });
-test('stats rejects invalid values',()=>{
- const s=normalizeStats({today:4,last7:-1,stories:0,days:[{date:'2026-10-23',clicks:5},{date:'oops',clicks:100}]});
- assert.equal(s.today,4);assert.equal(s.last7,null);assert.equal(s.stories,0);assert.deepEqual(s.days,[{date:'2026-10-23',clicks:5}]);
+test('stats requires complete dates, nonnegative integer values and matching totals',()=>{
+ const days=Array.from({length:7},(_,i)=>({date:'2026-10-'+(17+i),clicks:i}));
+ const raw={today:6,last7:21,stories:3,days};
+ assert.equal(normalizeStats(raw).total,21);
+ assert.throws(()=>normalizeStats({...raw,last7:-1}));
+ assert.throws(()=>normalizeStats({...raw,days:days.slice(1)}));
+ assert.throws(()=>normalizeStats({...raw,stories:22}));
+ assert.throws(()=>normalizeStats({...raw,total:500}));
+ assert.throws(()=>normalizeStats({...raw,days:[...days.slice(0,6),{date:'2026-10-23',clicks:0.5}]}));
+ assert.throws(()=>normalizeStats({...raw,days:[days[0],days[0],...days.slice(2)]}));
+ assert.throws(()=>normalizeStats(raw,30));
 });

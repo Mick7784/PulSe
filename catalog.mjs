@@ -32,9 +32,30 @@ export function normalizeTrackedLinks(raw) {
   }
   return result;
 }
-export function normalizeStats(raw) {
-  if(!raw||!Array.isArray(raw.days))throw new Error('Statistiques LinKs incompatibles.');
-  return {today:finiteNonnegative(raw.today),last7:finiteNonnegative(raw.last7),stories:finiteNonnegative(raw.stories),days:raw.days.slice(-30).filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d.date)&&Number.isFinite(d.clicks)&&d.clicks>=0).map(d=>({date:d.date,clicks:d.clicks})),updatedAt:new Date().toISOString()};
+export function normalizeStats(raw,period=7) {
+  const valid=v=>Number.isSafeInteger(v)&&v>=0;
+  if(!raw||!Array.isArray(raw.days)||raw.days.length!==period||
+     !valid(raw.today)||!valid(raw.last7)||!valid(raw.stories)||
+     (raw.period!==undefined&&raw.period!==period))throw new Error('Période statistique LinKs incompatible.');
+  const days=raw.days.map((d,i)=>{
+    if(!d||!/^\d{4}-\d{2}-\d{2}$/.test(d.date)||!valid(d.clicks))throw new Error('Statistiques incomplètes.');
+    const stamp=Date.parse(d.date+'T00:00:00Z');
+    if(!Number.isFinite(stamp)||new Date(stamp).toISOString().slice(0,10)!==d.date||
+      (i&&stamp!==Date.parse(raw.days[i-1].date+'T00:00:00Z')+86400000))throw new Error('Jours statistiques invalides.');
+    return {date:d.date,clicks:d.clicks};
+  });
+  const total=days.reduce((n,d)=>n+d.clicks,0);
+  if(!valid(total)||raw.today!==days.at(-1).clicks||raw.last7!==days.slice(-7).reduce((n,d)=>n+d.clicks,0)||
+     raw.stories>total||(raw.total!==undefined&&raw.total!==total))throw new Error('Totaux statistiques incohérents.');
+  return {today:raw.today,last7:raw.last7,total,period,stories:raw.stories,days,updatedAt:new Date().toISOString()};
 }
-function finiteNonnegative(v){return Number.isFinite(v)&&v>=0?v:null}
+export function normalizeVideo(raw){
+  if(raw===null)return null;
+  const url=httpURL(raw?.url);if(!url)return null;
+  const parsed=new URL(url),id=parsed.hostname==='youtu.be'?parsed.pathname.slice(1):
+    ['youtube.com','www.youtube.com'].includes(parsed.hostname)&&parsed.pathname==='/watch'?parsed.searchParams.get('v'):'';
+  if(!/^[A-Za-z0-9_-]{11}$/.test(id||''))return null;
+  let thumbnail='';try{const u=new URL(raw.thumbnail);if(u.protocol==='https:'&&u.hostname==='i.ytimg.com'&&!u.username&&!u.password&&u.pathname.startsWith('/vi/'+id+'/'))thumbnail=u.href}catch{}
+  return {id,title:clamp(raw.title,180)||'Vidéo YouTube',url:'https://www.youtube.com/watch?v='+id,thumbnail,type:'youtube'};
+}
 export function safeImageRef(ref){return typeof ref==='string'&&/^\/(uploads|assets)\/[A-Za-z0-9._-]{1,200}$/.test(ref)}

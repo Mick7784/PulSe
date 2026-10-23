@@ -1,0 +1,53 @@
+name: Validate PulSe
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, 'feat/**']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: pulse-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Unit and server tests
+        run: node --test tests/*.test.mjs
+      - name: Install test browser
+        run: |
+          npm install --prefix "$RUNNER_TEMP/pulse-browser" playwright@1.62.1
+          "$RUNNER_TEMP/pulse-browser/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Mobile, desktop, media and PWA browser regression
+        env:
+          NODE_PATH: ${{ runner.temp }}/pulse-browser/node_modules
+          PULSE_SCREENSHOT_DIR: ${{ runner.temp }}/pulse-screenshots
+        run: node tests/browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pulse-browser-fixtures
+          path: ${{ runner.temp }}/pulse-screenshots
+          if-no-files-found: ignore
+      - name: Build Docker and verify isolated container
+        run: |
+          set -euo pipefail
+          docker build -t pulse-validation .
+          docker run -d --name pulse-validation --read-only --cap-drop ALL --security-opt no-new-privileges:true -p 127.0.0.1:14173:4173 -e PULSE_TEST_USER=test -e PULSE_TEST_PASSWORD=local-validation-password pulse-validation
+          trap 'docker logs pulse-validation; docker rm -f pulse-validation' EXIT
+          for attempt in $(seq 1 20); do
+            if curl -fsS http://127.0.0.1:14173/healthz; then break; fi
+            sleep 1
+          done
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:14173/)" = 401
+          curl -fsS -u test:local-validation-password http://127.0.0.1:14173/ -o /dev/null
+          curl -fsS -u test:local-validation-password http://127.0.0.1:14173/pwa.mjs -o /dev/null
+          curl -fsS -u test:local-validation-password http://127.0.0.1:14173/api/stats | node -e "let s='';process.stdin.on('data',b=>s+=b);process.stdin.on('end',()=>{if(JSON.parse(s).available!==false)process.exit(1)})"
+# Validation only: no image publishing, production secrets or deployment job.

@@ -1,25 +1,26 @@
 <!doctype html>
-<html lang="fr">
-<head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#121b29"><meta name="referrer" content="no-referrer"><meta name="description" content="PulSe, statistiques et préparation de Stories.">
-<link rel="icon" href="icon.svg"><link rel="manifest" href="manifest.webmanifest"><link rel="stylesheet" href="style.css"><script src="app.js" defer></script>
-<title>PulSe — Tableau de bord</title>
-</head>
-<body><main class="shell">
-  <header class="topbar"><div><div class="eyebrow">by DomotiK Studio <span class="pill">V1 · chantier</span></div><h1>PulSe</h1><p>Un coup d’œil, une Story.</p></div><button id="refresh" class="icon-button" type="button" aria-label="Actualiser les données" title="Actualiser">↻</button></header>
-  <section class="story-zone" aria-label="Préparation des Stories"><button class="story-toggle" id="story-toggle" type="button" aria-expanded="false" aria-controls="story-panel"><span>▣&nbsp; Préparer une Story</span><span id="toggle-arrow" aria-hidden="true">⌄</span></button>
-    <div class="story-collapse" id="story-collapse"><div class="story-panel" id="story-panel" aria-hidden="true">
-      <div class="section-heading"><h2>Offres en cours</h2><span id="offers-count" class="count">—</span></div><p class="hint">Promotions actives de LinKs, avec leur lien associé.</p><div id="campaigns" class="selection-list"></div>
-      <div class="section-heading spaced"><h2>Liens suivis</h2><span id="links-count" class="count">—</span></div><p class="hint">Liens suivis créés dans LinKs, hors campagne. Les liens classiques sont exclus. Connexion privée nécessaire.</p><label class="search-label"><span class="sr-only">Rechercher un lien</span><input id="link-search" type="search" placeholder="Rechercher un lien…" autocomplete="off"></label><div id="tracked-links" class="selection-list"></div>
-      <div class="section-heading spaced"><h2>Photo personnelle</h2></div><p class="hint">Choisir une photo sur le téléphone et lui associer, si besoin, une offre ou un lien suivi.</p><div class="personal"><label for="photo" class="file-button">＋ Choisir une image</label><input type="file" id="photo" accept="image/*"><div id="personal-options" hidden><p id="photo-name" class="small-note"></p><label for="personal-existing">Associer un lien de LinKs</label><select id="personal-existing"><option value="">Aucun lien</option></select><div id="personal-actions" class="actions"></div></div></div>
-      <p class="work-status" id="story-status" role="status" aria-live="polite"></p>
-    </div></div>
-  </section>
-  <section class="dashboard" aria-label="Statistiques LinKs"><div class="dashboard-heading"><div><h2>Statistiques</h2><p id="connection-status" class="subtle">Connexion à LinKs…</p></div><span class="period">7 derniers jours</span></div>
-    <div class="metrics"><article class="metric"><span>Clics aujourd’hui</span><strong id="stat-today">—</strong></article><article class="metric"><span>Clics sur 7 jours</span><strong id="stat-week">—</strong></article><article class="metric"><span>Stories déclarées*</span><strong id="stat-stories">—</strong></article><article class="metric"><span>Offres actives</span><strong id="stat-offers">—</strong></article></div>
-    <article class="chart-card"><div class="chart-heading"><h3>Évolution des clics</h3><span id="chart-caption">Données LinKs</span></div><div id="chart" class="chart-placeholder" aria-label="Graphique des clics"><span>En attente des statistiques sécurisées de LinKs</span></div></article>
-    <p class="footnote">* Une Story déclarée ne constitue pas une confirmation de publication par Instagram. Aucun chiffre fictif n’est affiché.</p>
-  </section>
-  <footer><span>PulSe · Prototype fonctionnel</span><span>Interface graphique définitive à venir</span></footer>
-</main></body></html>
+<html lang="fr"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="#0b1220"><meta name="referrer" content="no-referrer"><meta name="description" content="Préparez vos Stories et suivez les clics LinKs avec PulSe.">
+<link rel="icon" href="icon.svg"><link rel="apple-touch-icon" href="icon-192.png"><link rel="manifest" href="manifest.webmanifest"><link rel="stylesheet" href="style.css"><script src="app.js" type="module"></script><title>PulSe — Tableau de bord</title>
+</head><body><main class="shell">
+<header class="topbar"><h1>PulSe</h1><div class="header-actions"><button id="install" type="button">Installer l’app</button><button id="refresh" class="icon-button" type="button" aria-label="Actualiser les données">↻</button></div></header>
+<p id="install-help" class="install-help" role="status" hidden></p>
+<section aria-label="Préparation des Stories"><button class="story-toggle" id="story-toggle" type="button" aria-expanded="false" aria-controls="story-panel"><span>Préparer une Story</span><span aria-hidden="true">⌄</span></button>
+<div id="story-panel" class="story-panel" hidden>
+<div class="section-heading"><div><p class="eyebrow">À la une</p><h2>Dernière vidéo YouTube</h2></div></div><div id="latest-video" class="video-card"></div>
+<div class="section-heading spaced"><h2>Offres actives</h2><span id="offers-count" class="count">—</span></div><div id="campaigns" class="selection-list"></div>
+<div class="section-heading spaced"><h2>Liens suivis</h2><span id="links-count" class="count">—</span></div>
+<label class="search-label"><span class="sr-only">Rechercher un lien par nom ou catégorie</span><input id="link-search" type="search" placeholder="Rechercher un nom, une catégorie…" autocomplete="off"></label><div id="tracked-links" class="selection-list"></div>
+<section id="editor" class="editor" aria-labelledby="editor-title" hidden><p class="eyebrow">Votre Story</p><h3 id="editor-title"></h3>
+<label class="file-button" for="story-media">Choisir une photo ou une vidéo du téléphone</label><input id="story-media" type="file" accept="image/*,video/*"><p id="media-name" class="small-note"></p>
+<img id="preview" class="story-preview" alt="Aperçu du visuel Story" hidden><video id="video-preview" class="story-preview" controls playsinline preload="metadata" hidden></video>
+<label for="story-link" class="small-note">Lien court suivi · à coller dans le sticker Lien</label><input id="story-link" class="story-link" readonly>
+<div class="actions"><button id="copy" type="button" disabled>Copier le lien</button><button id="share" type="button" disabled>Partager vers Instagram</button><a id="download" class="secondary" hidden>Enregistrer le média</a></div>
+<p class="small-note">Copiez le lien, choisissez Instagram dans le partage, puis ajoutez le sticker Lien. Vous pouvez aussi enregistrer le média et l’importer depuis Instagram.</p></section>
+<p class="work-status" id="story-status" role="status" aria-live="polite"></p></div></section>
+<section class="dashboard" aria-label="Statistiques LinKs"><div class="dashboard-heading"><div><p class="eyebrow">Votre activité</p><h2>Statistiques</h2></div><div class="period-picker" role="group" aria-label="Période des statistiques"><button type="button" data-period="7" aria-pressed="true">7 jours</button><button type="button" data-period="30" aria-pressed="false">30 jours</button></div></div>
+<p id="connection-status" class="subtle" role="status">Connexion à LinKs…</p>
+<div class="metrics"><article class="metric"><span>Clics aujourd’hui</span><strong id="stat-today">—</strong></article><article class="metric"><span id="period-label">Clics sur 7 jours</span><strong id="stat-period">—</strong></article><article class="metric"><span>Clics Story</span><strong id="stat-story">—</strong><small>Inclus dans les clics de la période</small></article></div>
+<article class="chart-card"><div class="chart-heading"><h3>Clics quotidiens</h3><span id="chart-caption">Chargement…</span></div><div id="chart" class="chart-placeholder"></div><details id="daily-details" hidden><summary>Voir les jours et les valeurs</summary><table><caption class="sr-only">Clics quotidiens LinKs</caption><thead><tr><th scope="col">Jour</th><th scope="col">Clics</th></tr></thead><tbody id="daily-values"></tbody></table></details></article>
+<p class="footnote">Source : compteurs LinKs. Les clics ne correspondent pas à des visiteurs uniques ni à une confirmation de publication Instagram.</p></section>
+<footer><span>Connecté à LinKs</span><span>PulSe · V1.1.0</span></footer></main></body></html>

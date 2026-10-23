@@ -23,10 +23,10 @@ test('PulSe auth, catalogue campagnes, aucun lien classic, stat et proxy',async(
   r=await fetch(base+'/',{headers:{Authorization:auth}});assert.equal(r.status,200);assert.match(await r.text(),/<title>PulSe/);
   r=await fetch(base+'/api/catalog',{headers:{Authorization:auth}});assert.equal(r.status,200);const cat=await r.json();assert.equal(cat.campaigns.length,1);assert.deepEqual(cat.trackedLinks,[]);
   r=await fetch(base+'/api/stats',{headers:{Authorization:auth}});assert.equal((await r.json()).available,false);
-  r=await fetch(base+'/api/story-link',{method:'POST',headers:{Authorization:auth,'Content-Type':'application/json'},body:JSON.stringify({type:'campaign',id:'offer'})});assert.deepEqual(await r.json(),{url:'https://example.com/promo',tracked:false});
-  r=await fetch(base+'/api/story-link',{method:'POST',headers:{Authorization:auth,'Content-Type':'application/json'},body:JSON.stringify({type:'classic',id:'regular'})});assert.equal(r.status,400);
-  r=await fetch(base+'/api/story-link',{method:'POST',headers:{Authorization:auth,'Content-Type':'application/json'},body:JSON.stringify({type:'independent',id:'regular'})});assert.equal(r.status,503);
-  r=await fetch(base+'/api/story-link',{method:'POST',headers:{Authorization:auth,'Content-Type':'application/json'},body:JSON.stringify({type:'campaign',id:'unknown'})});assert.equal(r.status,404);
+  r=await fetch(base+'/api/story-link',{method:'POST',headers:{Authorization:auth,'Content-Type':'application/json','X-PulSe-Request':'1'},body:JSON.stringify({type:'campaign',id:'offer'})});assert.equal(r.status,503);
+  r=await fetch(base+'/api/story-link',{method:'POST',headers:{Authorization:auth,'Content-Type':'application/json','X-PulSe-Request':'1'},body:JSON.stringify({type:'classic',id:'regular'})});assert.equal(r.status,400);
+  r=await fetch(base+'/api/story-link',{method:'POST',headers:{Authorization:auth,'Content-Type':'application/json','X-PulSe-Request':'1'},body:JSON.stringify({type:'independent',id:'regular'})});assert.equal(r.status,503);
+  r=await fetch(base+'/api/story-link',{method:'POST',headers:{Authorization:auth,'Content-Type':'application/json','X-PulSe-Request':'1'},body:JSON.stringify({type:'campaign',id:'unknown'})});assert.equal(r.status,404);
   r=await fetch(base+'/api/visual?id=offer',{headers:{Authorization:auth}});assert.equal(r.status,200);assert.equal(r.headers.get('content-type'),'image/png');assert.ok((await r.arrayBuffer()).byteLength>0);
   r=await fetch(base+'/api/visual?id=regular',{headers:{Authorization:auth}});assert.equal(r.status,404);
  }finally{await close(pulse);await close(fake)}
@@ -51,13 +51,13 @@ test('private bridge lists tracked links and only returns a tracked link on succ
  try{
   let r=await fetch(base+'/api/catalog',{headers:{Authorization:auth}}),catalog=await r.json();
   assert.equal(catalog.trackedAvailable,true);assert.deepEqual(catalog.trackedLinks.map(x=>x.id),['tracked-123']);
-  r=await fetch(base+'/api/story-link',{method:'POST',headers:{Authorization:auth,'Content-Type':'application/json'},body:JSON.stringify({type:'independent',id:'tracked-123'})});
+  r=await fetch(base+'/api/story-link',{method:'POST',headers:{Authorization:auth,'Content-Type':'application/json','X-PulSe-Request':'1'},body:JSON.stringify({type:'independent',id:'tracked-123'})});
   assert.deepEqual(await r.json(),{url:'https://links.example/x12345678',tracked:true});
   failLink=true;
-  r=await fetch(base+'/api/story-link',{method:'POST',headers:{Authorization:auth,'Content-Type':'application/json'},body:JSON.stringify({type:'independent',id:'tracked-123'})});
+  r=await fetch(base+'/api/story-link',{method:'POST',headers:{Authorization:auth,'Content-Type':'application/json','X-PulSe-Request':'1'},body:JSON.stringify({type:'independent',id:'tracked-123'})});
   assert.equal(r.status,503);
   // A failing private bridge must never silently return the partner URL.
-  r=await fetch(base+'/api/story-link',{method:'POST',headers:{Authorization:auth,'Content-Type':'application/json'},body:JSON.stringify({type:'campaign',id:'offer'})});
+  r=await fetch(base+'/api/story-link',{method:'POST',headers:{Authorization:auth,'Content-Type':'application/json','X-PulSe-Request':'1'},body:JSON.stringify({type:'campaign',id:'offer'})});
   assert.equal(r.status,503);
  }finally{await close(pulse);await close(fake)}
 });

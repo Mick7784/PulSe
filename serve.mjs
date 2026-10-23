@@ -3,16 +3,16 @@ import https from 'node:https';
 import { timingSafeEqual } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
-import { httpURL, normalizeCatalog, normalizeTrackedLinks, normalizeStats, safeImageRef } from './catalog.mjs';
+import { httpURL, normalizeCatalog, normalizeTrackedLinks, normalizeStats, normalizeVideo, safeImageRef } from './catalog.mjs';
 
 const ROOT = new URL('./', import.meta.url);
-const STATIC = new Set(['index.html','app.js','style.css','manifest.webmanifest','icon.svg','icon-192.png','icon-512.png','sw.js']);
-const MIME = {html:'text/html; charset=utf-8',js:'text/javascript; charset=utf-8',css:'text/css; charset=utf-8',webmanifest:'application/manifest+json',svg:'image/svg+xml',png:'image/png'};
+const STATIC = new Set(['index.html','app.js','pwa.mjs','style.css','manifest.webmanifest','icon.svg','icon-192.png','icon-512.png','sw.js']);
+const MIME = {html:'text/html; charset=utf-8',js:'text/javascript; charset=utf-8',mjs:'text/javascript; charset=utf-8',css:'text/css; charset=utf-8',webmanifest:'application/manifest+json',svg:'image/svg+xml',png:'image/png'};
 const HEADERS = {
   'Cache-Control':'no-store', 'Referrer-Policy':'no-referrer',
   'X-Content-Type-Options':'nosniff','X-Frame-Options':'DENY',
   'Permissions-Policy':'web-share=(self), clipboard-write=(self)',
-  'Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; connect-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+  'Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob:; media-src 'self' blob:; connect-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
 };
 function sameSecret(a,b) {
   const left=Buffer.from(a||''),right=Buffer.from(b||'');
@@ -21,8 +21,13 @@ function sameSecret(a,b) {
 function responseJson(res,code,body){const payload=Buffer.from(JSON.stringify(body));res.writeHead(code,{...HEADERS,'Content-Type':'application/json; charset=utf-8','Content-Length':payload.length});res.end(payload)}
 async function readJson(req,max=4096){let raw='';for await(const chunk of req){raw+=chunk;if(raw.length>max)throw new Error('Corps de requête trop volumineux.')}return JSON.parse(raw||'{}')}
 function fixedURL(base,path) {return new URL(path,base).href}
-function dateKey(offset){const day=new Date();day.setUTCDate(day.getUTCDate()+offset);return day.toISOString().slice(0,10)}
-export function createPulseServer({ user='',password='', linksURL='http://domotik-links:8080',bridgeToken='',bridgeURL='', cert,key }={}) {
+async function boundedBytes(response,limit){
+ if(Number(response.headers.get('content-length')||0)>limit)throw Error('Réponse trop volumineuse.');
+ const chunks=[];let size=0;const reader=response.body.getReader();
+ try{for(;;){const {value,done}=await reader.read();if(done)break;size+=value.length;if(size>limit){await reader.cancel();throw Error('Réponse trop volumineuse.')}chunks.push(value)}}finally{reader.releaseLock()}
+ return Buffer.concat(chunks,size);
+}
+export function createPulseServer({ user='',password='', linksURL='http://domotik-links:8080',bridgeToken='',bridgeURL='', cert,key,fetcher=fetch }={}) {
   if(Boolean(user)!==Boolean(password)||user.includes(':'))throw new Error('Identifiants invalides.');
   if(!httpURL(linksURL))throw new Error('LINKS_PUBLIC_URL doit être une URL HTTP(S) valide.');
   if(bridgeToken&&(!httpURL(bridgeURL||linksURL)))throw new Error('URL de passerelle invalide.');
@@ -36,9 +41,9 @@ export function createPulseServer({ user='',password='', linksURL='http://domoti
       const headers={Accept:'application/json'};
       if(privateAccess)headers.Authorization='Bearer '+bridgeToken;
       if(data)headers['Content-Type']='application/json';
-      const r=await fetch(destination,{method,headers,body:data?JSON.stringify(data):undefined,redirect:'error',signal:controller.signal,cache:'no-store'});
+      const r=await fetcher(destination,{method,headers,body:data?JSON.stringify(data):undefined,redirect:'error',signal:controller.signal,cache:'no-store'});
       if(!r.ok)throw new Error('LinKs a répondu HTTP '+r.status);
-      return r.json();
+      return JSON.parse((await boundedBytes(r,1024*1024)).toString('utf8'));
     }finally {clearTimeout(timeout)}
   }
   async function loadCatalog(force=false) {
@@ -46,6 +51,8 @@ export function createPulseServer({ user='',password='', linksURL='http://domoti
     if(catalogCache.promise)return catalogCache.promise;
     catalogCache.promise=(async()=>{
       const publicData=normalizeCatalog(await requestLinks('/api/public-config'));
+      try{publicData.video=normalizeVideo(await requestLinks('/latest-video.json'));}
+      catch{publicData.video=null;publicData.videoReason='Vidéo momentanément indisponible dans LinKs.';}
       if(bridgeToken){
         try {
           const extra=await requestLinks('/api/pulse/links',{privateAccess:true});
@@ -60,7 +67,7 @@ export function createPulseServer({ user='',password='', linksURL='http://domoti
   }
   const handler=async (req,res)=>{
     let route;try{route=new URL(req.url,'http://localhost')}catch{return responseJson(res,400,{error:'Adresse invalide.'})}
-    if(req.method==='GET'&&route.pathname==='/healthz')return responseJson(res,200,{status:'ok',version:'pulse-v1'});
+    if(req.method==='GET'&&route.pathname==='/healthz')return responseJson(res,200,{status:'ok',version:'1.1.0'});
     if(user&&!sameSecret(req.headers.authorization,authValue)) {
       res.writeHead(401,{...HEADERS,'WWW-Authenticate':'Basic realm="PulSe", charset="UTF-8"'});return res.end('Connexion requise.');
     }
@@ -70,18 +77,22 @@ export function createPulseServer({ user='',password='', linksURL='http://domoti
         catch{return responseJson(res,503,{error:'LinKs momentanément inaccessible : vérifie LINKS_PUBLIC_URL.'})}
       }
       if(req.method==='GET'&&route.pathname==='/api/stats') {
+        const requested=route.searchParams.getAll('days');
+        if(requested.length>1||(requested.length&&!['7','30'].includes(requested[0])))return responseJson(res,400,{error:'Choisissez 7 ou 30 jours.'});
+        const period=Number(requested[0]||7);
         if(!bridgeToken)return responseJson(res,200,{available:false,reason:'Connexion sécurisée des statistiques LinKs à finaliser.'});
-        try {const stats=normalizeStats(await requestLinks('/api/pulse/stats',{privateAccess:true}));return responseJson(res,200,{available:true,...stats})}
+        try {const stats=normalizeStats(await requestLinks('/api/pulse/stats?days='+period,{privateAccess:true}),period);return responseJson(res,200,{available:true,...stats})}
         catch {return responseJson(res,200,{available:false,reason:'La passerelle statistique LinKs ne répond pas.'})}
       }
       if(req.method==='POST'&&route.pathname==='/api/story-link') {
         if(!req.headers['content-type']?.startsWith('application/json'))return responseJson(res,415,{error:'JSON requis.'});
         if(req.headers.origin){let origin;try{origin=new URL(req.headers.origin).host}catch{return responseJson(res,403,{error:'Origine invalide.'})}if(origin!==req.headers.host)return responseJson(res,403,{error:'Origine externe interdite.'})}
-        const body=await readJson(req);
-        if(!['campaign','independent'].includes(body.type)||typeof body.id!=='string'||body.id.length>100)return responseJson(res,400,{error:'Seules les offres et les liens suivis sont autorisés.'});
+        if(req.headers['sec-fetch-site']==='cross-site'||req.headers['x-pulse-request']!=='1')return responseJson(res,403,{error:'Requête PulSe requise.'});
+        let body;try{body=await readJson(req)}catch{return responseJson(res,400,{error:'Demande JSON invalide ou trop volumineuse.'})}
+        if(!body||!['campaign','independent','youtube'].includes(body.type)||typeof body.id!=='string'||body.id.length>100)return responseJson(res,400,{error:'Contenu PulSe invalide.'});
         const cat=await loadCatalog();
         if(body.type==='independent'&&(!bridgeToken||!cat.trackedAvailable))return responseJson(res,503,{error:'Liens suivis indisponibles : passerelle LinKs non connectée.'});
-        const group=body.type==='campaign'?cat.campaigns:cat.trackedLinks;
+        const group=body.type==='campaign'?cat.campaigns:body.type==='youtube'?[cat.video].filter(Boolean):cat.trackedLinks;
         const item=group.find(x=>x.id===body.id);
         if(!item)return responseJson(res,404,{error:'Contenu indisponible.'});
         if(bridgeToken) {
@@ -92,21 +103,22 @@ export function createPulseServer({ user='',password='', linksURL='http://domoti
           return responseJson(res,503,{error:'Impossible de créer le lien suivi LinKs. Réessaie plus tard.'});
         }
         if(body.type==='independent')return responseJson(res,503,{error:'Génération du lien suivi indisponible : réessaie plus tard.'});
-        // Backward-compatible POC mode until the private bridge is deployed.
-        return responseJson(res,200,{url:item.url,tracked:false});
+        return responseJson(res,503,{error:'Connexion sécurisée LinKs nécessaire pour préparer un lien suivi.'});
       }
       if(req.method==='GET'&&route.pathname==='/api/visual') {
         const id=route.searchParams.get('id');
         const cat=await loadCatalog();
-        const item=cat.campaigns.find(x=>x.id===id);
-        if(!item||!safeImageRef(item.image))return responseJson(res,404,{error:'Aucun visuel compatible.'});
-        const dest=fixedURL(linkBase,item.image);
+        const video=route.searchParams.get('type')==='youtube';
+        const item=video&&cat.video?.id===id?cat.video:!video?cat.campaigns.find(x=>x.id===id):null;
+        if(!item||(video?!item.thumbnail:!safeImageRef(item.image)))return responseJson(res,404,{error:'Aucun visuel compatible.'});
+        // The client supplies only an ID. The URL is validated metadata, never an arbitrary proxy URL.
+        const dest=video?item.thumbnail:fixedURL(linkBase,item.image);
         const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),5000);
         try {
-          const r=await fetch(dest,{redirect:'error',signal:controller.signal});
+          const r=await fetcher(dest,{redirect:'error',signal:controller.signal});
           if(!r.ok||!['image/png','image/jpeg','image/webp','image/gif'].includes((r.headers.get('content-type')||'').split(';')[0]))return responseJson(res,502,{error:'Visuel indisponible.'});
           if(Number(r.headers.get('content-length')||0)>8*1024*1024)return responseJson(res,413,{error:'Visuel trop lourd.'});
-          const bytes=Buffer.from(await r.arrayBuffer());if(bytes.length>8*1024*1024)return responseJson(res,413,{error:'Visuel trop lourd.'});
+          const bytes=await boundedBytes(r,8*1024*1024);
           res.writeHead(200,{...HEADERS,'Content-Type':r.headers.get('content-type').split(';')[0],'Content-Length':bytes.length});return res.end(bytes);
         }finally {clearTimeout(timeout)}
       }
@@ -121,10 +133,12 @@ export function createPulseServer({ user='',password='', linksURL='http://domoti
 export async function startFromEnvironment(env=process.env) {
   if(env.PULSE_REQUIRE_AUTH!=='0'&&(!env.PULSE_TEST_USER||!env.PULSE_TEST_PASSWORD))throw new Error('Identifiants PulSe requis.');
   if(env.PULSE_REQUIRE_AUTH!=='0'&&(env.PULSE_TEST_PASSWORD.length<12||env.PULSE_TEST_PASSWORD==='REMPLACER_PAR_UN_SECRET_ALEATOIRE'))throw new Error('Mot de passe de test : 12 caractères minimum.');
+  if(env.PULSE_BRIDGE_TOKEN&&env.PULSE_BRIDGE_TOKEN.length<32)throw new Error('Secret de passerelle : 32 caractères minimum.');
+  if(env.PULSE_REQUIRE_AUTH==='0'&&!['127.0.0.1','localhost','::1'].includes(env.PULSE_HOST||'127.0.0.1'))throw new Error('Authentification obligatoire hors boucle locale.');
   const server=createPulseServer({user:env.PULSE_TEST_USER||'',password:env.PULSE_TEST_PASSWORD||'',linksURL:env.LINKS_PUBLIC_URL||'http://domotik-links:8080',bridgeToken:env.PULSE_BRIDGE_TOKEN||'',bridgeURL:env.LINKS_BRIDGE_URL||''});
   const host=env.PULSE_HOST||'127.0.0.1',port=Number(env.PULSE_PORT||4173);
   await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(port,host,resolve)});
-  console.log(`PulSe V1 : HTTP sur ${host}:${port} ; source LinKs : ${env.LINKS_PUBLIC_URL||'http://domotik-links:8080'}`);
+  console.log(`PulSe V1.1 : HTTP sur ${host}:${port}`);
   return server;
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href)startFromEnvironment().catch(e=>{console.error('Démarrage refusé :',e.message);process.exitCode=1});

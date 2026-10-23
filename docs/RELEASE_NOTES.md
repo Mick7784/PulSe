@@ -1,25 +1,16 @@
-# PulSe V1.1.1
+# PulSe V1.1.2 — installation PWA
 
-Première publication versionnée du compagnon mobile **LinKs PulSe**, dans son dépôt autonome.
+Correctif de la V1.1.1, sans changement d'interface graphique.
 
-## Inclus
-- PWA mobile et installation sur écran d’accueil.
-- Tableau de bord des clics avec périodes 7 et 30 jours, histogramme lisible et accessible sur mobile.
-- Préparation des Stories : vidéo YouTube récente, offres et liens indépendants suivis, image verticale et média local.
-- Parcours de publication guidé : préparer, copier le lien suivi, partager le média, puis ajouter manuellement le sticker Lien dans Instagram.
-- Application Docker indépendante, authentification HTTP, proxy limité, données privées non mises en cache.
+- Métadonnées d'installation, icônes et service worker désormais accessibles sans authentification HTTP Basic ; dashboard, scripts et APIs restent protégés.
+- Le manifeste est demandé avec les identifiants quand ils sont nécessaires.
+- Service worker révisé : seul le contenu PWA public peut être mis en cache ; aucun HTML authentifié, lien privé, compteur, API ni média.
+- Page hors-ligne neutre « réessayer » ; aucun contenu privé en cache.
+- Test automatisé supplémentaire des autorisations HTTP et de l'API Chromium de manifeste/installabilité (navigateur de CI).
+- Image GHCR `ghcr.io/mick7784/links-pulse:1.1.2`.
 
-## Docker
-Image de release versionnée : `ghcr.io/mick7784/links-pulse:1.1.1` (AMD64 et ARM64).
-La publication ne déploie **aucun** conteneur et ne modifie **aucune** stack Dockhand ou Pangolin.
+**Pré-requis** : HTTPS avec certificat valide sur le domaine public derrière Pangolin. Une authentification supplémentaire côté proxy peut toujours bloquer le navigateur : vérifier que les icônes et le manifeste renvoient HTTP 200 depuis le téléphone, sans demander d'identifiants.
 
-## Prérequis
-- LinKs **V1.316**, avec extension PulSe effectivement déployée côté LinKs.
-- Conserver les variables et le secret partagé `PULSE_BRIDGE_TOKEN` du déploiement existant, sans jamais les publier.
+**Limite** : le test Chromium desktop ne prouve pas la création d'un WebAPK sur Samsung Android. Une recette physique Chrome/Samsung Internet est requise. Le nouveau logo multicolore et la refonte PulSe V1.2 ne sont pas inclus.
 
-## Points à connaître
-- Cette version conserve l’identité **PulSe en texte** et la charte navy/bleu électrique : le nouveau logo multicolore et la refonte graphique ultérieure ne sont **pas inclus**.
-- L’ouverture de la Story et sa publication dans Instagram restent des actions manuelles ; le partage système ne prouve pas une publication.
-- Les tests de navigation utilisent des fixtures et un partage simulé. Validation physique Samsung/iOS encore à réaliser.
-
-Voir le README et `docs/RECETTE.md` pour la recette et le retour arrière.
+**Déploiement** : garder le Compose et les secrets existants ; définir `PULSE_VERSION=1.1.2` dans l'environnement Dockhand puis redéployer seulement après validation. Rollback : `PULSE_VERSION=1.1.1`.

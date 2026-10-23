@@ -6,7 +6,9 @@ import { pathToFileURL } from 'node:url';
 import { httpURL, normalizeCatalog, normalizeTrackedLinks, normalizeStats, normalizeVideo, safeImageRef } from './catalog.mjs';
 
 const ROOT = new URL('./', import.meta.url);
-const STATIC = new Set(['index.html','app.js','pwa.mjs','style.css','manifest.webmanifest','icon.svg','icon-192.png','icon-512.png','sw.js']);
+const STATIC = new Set(['index.html','app.js','pwa.mjs','style.css','manifest.webmanifest','icon.svg','icon-192.png','icon-512.png','sw.js','offline.html']);
+// Public installation metadata only; application HTML, scripts and all APIs stay authenticated.
+const PUBLIC_PWA = new Set(['/manifest.webmanifest','/icon.svg','/icon-192.png','/icon-512.png','/sw.js','/offline.html']);
 const MIME = {html:'text/html; charset=utf-8',js:'text/javascript; charset=utf-8',mjs:'text/javascript; charset=utf-8',css:'text/css; charset=utf-8',webmanifest:'application/manifest+json',svg:'image/svg+xml',png:'image/png'};
 const HEADERS = {
   'Cache-Control':'no-store', 'Referrer-Policy':'no-referrer',
@@ -75,8 +77,8 @@ export function createPulseServer({ user='',password='', linksURL='http://domoti
   }
   const handler=async (req,res)=>{
     let route;try{route=new URL(req.url,'http://localhost')}catch{return responseJson(res,400,{error:'Adresse invalide.'})}
-    if(req.method==='GET'&&route.pathname==='/healthz')return responseJson(res,200,{status:'ok',version:'1.1.1'});
-    if(user&&!sameSecret(req.headers.authorization,authValue)) {
+    if(req.method==='GET'&&route.pathname==='/healthz')return responseJson(res,200,{status:'ok',version:'1.1.2'});
+    if(user && !(req.method==='GET'&&PUBLIC_PWA.has(route.pathname)) && !sameSecret(req.headers.authorization,authValue)) {
       res.writeHead(401,{...HEADERS,'WWW-Authenticate':'Basic realm="PulSe", charset="UTF-8"'});return res.end('Connexion requise.');
     }
     try {
@@ -150,7 +152,7 @@ export async function startFromEnvironment(env=process.env) {
   const server=createPulseServer({user:env.PULSE_TEST_USER||'',password:env.PULSE_TEST_PASSWORD||'',linksURL:env.LINKS_PUBLIC_URL||'http://domotik-links:8080',bridgeToken:env.PULSE_BRIDGE_TOKEN||'',bridgeURL:env.LINKS_BRIDGE_URL||''});
   const host=env.PULSE_HOST||'127.0.0.1',port=Number(env.PULSE_PORT||4173);
   await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(port,host,resolve)});
-  console.log(`PulSe V1.1 : HTTP sur ${host}:${port}`);
+  console.log(`PulSe V1.1.2 : HTTP sur ${host}:${port}`);
   return server;
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href)startFromEnvironment().catch(e=>{console.error('Démarrage refusé :',e.message);process.exitCode=1});

@@ -59,3 +59,28 @@ test('bridge: strict 7/30 stats, immutable video request, safe visual proxy and 
   fail=false;videoMissing=true;assert.equal((await(await get('/api/catalog?refresh=1')).json()).video,null);
  }finally{await close(server)}
 });
+
+test('PWA installation resources are available without credentials while the dashboard and APIs stay private',async()=>{
+ const server=createPulseServer({user:'admin',password:'long-password-123'}),base=await open(server);
+ try{
+  for(const path of ['/manifest.webmanifest','/icon.svg','/icon-192.png','/icon-512.png','/sw.js','/offline.html']){
+   const response=await fetch(base+path);
+   assert.equal(response.status,200,'public PWA asset: '+path);
+   if(path==='/manifest.webmanifest'){
+    assert.match(response.headers.get('content-type'),/application\/manifest\+json/);
+    const manifest=await response.json();
+    assert.equal(manifest.display,'standalone');
+    assert.equal(manifest.start_url,'/');
+    assert.deepEqual(manifest.icons.map(icon=>icon.sizes),['192x192','512x512']);
+   }
+  }
+  for(const path of ['/','/index.html','/app.js','/api/catalog','/api/stats','/api/visual']){
+   assert.equal((await fetch(base+path)).status,401,'authenticated route: '+path);
+  }
+  const html=await(await fetch(base+'/',{headers:{Authorization:auth}})).text();
+  assert.match(html,/rel="manifest"[^>]*crossorigin="use-credentials"/);
+  const sw=await(await fetch(base+'/sw.js')).text();
+  assert.match(sw,/pulse-public-v1\.1\.2/);
+  assert.doesNotMatch(sw,/PUBLIC_SHELL=[^;]*\/api\//);
+ }finally{await close(server)}
+});

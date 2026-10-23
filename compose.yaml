@@ -1,9 +1,8 @@
 name: links-pulse-test
 services:
   pulse:
-    image: pulse-test:1.1.1
-    pull_policy: build
-    build: .
+    image: ghcr.io/mick7784/links-pulse:${PULSE_VERSION:-1.1.1}
+    pull_policy: always
     restart: unless-stopped
     init: true
     read_only: true

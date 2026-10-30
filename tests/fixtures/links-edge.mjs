@@ -2,7 +2,8 @@
 import http from 'node:http';
 let bridgeCalls=0;
 http.createServer((req,res)=>{
- const path=new URL(req.url,'http://links.test').pathname;
+ // Nginx matches locations on decoded paths. Include that second-hop behavior.
+ let path;try{path=decodeURIComponent(new URL(req.url,'http://links.test').pathname)}catch{res.writeHead(400);return res.end()}
  const send=(status,body)=>{res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(body))};
  if(path==='/fixture-count')return send(200,{bridgeCalls});
  if(path.startsWith('/api/pulse/')){

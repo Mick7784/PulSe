@@ -54,7 +54,7 @@ try{
    const r=await request(side,host,path,{Authorization:auth,'X-Forwarded-For':'127.0.0.1','X-Forwarded-Host':'links.test'});
    assert.equal(r.status,418,side+' '+host+path);assert.equal(r.headers['cache-control'],'no-store');assert.equal(r.body,'');
   }
-  for(const host of ['links.test','www.links.test'])for(const path of ['/api/pulse','/api/pulse/links','/api/pulse/stats?days=7','/api/pulse/story-link','/api//pulse/links','//api/pulse/links','/%61pi/pulse/links','/api/%70ulse/links','/api%2fpulse/links','/x/../api/pulse/links'])for(const method of ['GET','POST','HEAD','OPTIONS']){
+  for(const host of ['links.test','www.links.test'])for(const path of ['/api/pulse','/api/pulse/links','/api/pulse/stats?days=7','/api/pulse/story-link','/api//pulse/links','//api/pulse/links','/%61pi/pulse/links','/api/%70ulse/links','/api%2fpulse/links','/%2fapi/pulse/links','/api%2Fpulse%2Fstats','/api/%70ulse%2fstats','/api/pulse%2fstats','/x/../api/pulse/links'])for(const method of ['GET','POST','HEAD','OPTIONS']){
    const r=await request(side,host,path,{Authorization:'Bearer '+secret,'X-Forwarded-For':'127.0.0.1'},method);
    assert.ok([400,418].includes(r.status),method+' '+side+' '+host+path+' = '+r.status);
   }

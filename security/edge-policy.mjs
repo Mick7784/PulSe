@@ -18,7 +18,8 @@ export function edgePolicy(input) {
   const host=hosts=>'('+hosts.map(h=>'Host(`'+h+'`)').join(' || ')+')';
   const deny=rule=>({entryPoints:[entry.name],rule,priority:1000000000,service:'noop@internal',middlewares:['pulse-private-no-store'],...(entry.tls?{tls:{}}:{})});
   routers['pulse-private-deny-'+entry.name]=deny(host(pulse));
-  routers['links-bridge-deny-'+entry.name]=deny(host(links)+' && PathRegexp(`(?i)^/+api/+pulse(/|$)`)');
+  // Traefik may retain encoded reserved separators that Nginx decodes downstream.
+  routers['links-bridge-deny-'+entry.name]=deny(host(links)+' && PathRegexp(`(?i)^(/|%2f)+api(/|%2f)+pulse(/|%2f|$)`)');
  }
  return {http:{routers,middlewares:{'pulse-private-no-store':{headers:{customResponseHeaders:{'Cache-Control':'no-store'}}}}}};
 }

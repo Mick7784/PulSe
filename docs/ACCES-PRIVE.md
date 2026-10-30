@@ -68,6 +68,8 @@ Priorité explicite `1000000000`, à comparer à **tous** les routeurs effectifs
 
 La liste des hôtes doit couvrir tous les alias. Les accès directs IP, règles catch-all, autres proxies/ports et IPv6 sont à auditer séparément : une politique limitée aux hôtes ne les ferme pas automatiquement. Pas de liste blanche fondée sur `X-Forwarded-For`, ni d'exception IP globale qui rouvrirait le bridge. L'appel interne PulSe → LinKs contourne la bordure publique et conserve son Bearer.
 
+La recette a mis en évidence une différence de normalisation : Traefik peut conserver `%2f` dans le chemin utilisé pour les règles, alors que Nginx le décode en `/`. Le refus couvre explicitement ces deux formes, y compris à la racine et après `pulse`. Le serveur de recette reproduit le décodage du second serveur pour éviter qu'un simple 404 de fixture masque un contournement.
+
 ## Vérifications VPS en lecture seule, à faire avant activation
 
 Ne pas envoyer `.env`, dump de base Pangolin, clés privées, cookies ou sortie intégrale de `docker inspect`. Les commandes ci-dessous ne déploient rien. Définir les variables indiquées à partir des vrais noms, jamais d'un exemple.

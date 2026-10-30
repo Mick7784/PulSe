@@ -4,13 +4,21 @@ Application mobile de préparation de Stories et de consultation des clics LinKs
 
 ## Interface
 
-- En-tête : logo officiel PulSe, recadré à partir du fichier fourni sans modification des formes ou proportions. Les icônes d’installation restent celles de V1.1.2 jusqu’à la phase PWA.
+- En-tête : logo officiel PulSe, recadré à partir du fichier fourni sans modification des formes ou proportions. Les icônes PWA 192/512 utilisent l’image originale complète, sans découpe ni déformation ; les variantes `maskable` gardent toute l’image dans le cercle de sécurité central.
 - Interface exclusivement mobile (320–480 px), surfaces et hiérarchie LinKs, accents cyan/violet/rose. Navigation basse Statistiques / Stories ; le brouillon et la position de lecture sont conservés lors du changement de vue, dans la page en cours.
 - Dernière vidéo YouTube de la source LinKs existante : titre, miniature, préparation d’un lien court propre à cette vidéo et d’une image verticale 1080 × 1920 avec fond flou.
 - Offres actives : petite image et titre ; liens privés suivis : maillon, nom et recherche sur toute la liste fournie. Liens classiques exclus.
 - L’éditeur apparaît immédiatement sous le contenu choisi. Photo/vidéo du téléphone possible pour ce contenu ; aucun bloc « Photo personnelle » séparé. Les photos restent locales, les images sont préparées en JPEG 1080 × 1920 sans recadrer leur contenu ; les vidéos sont partagées dans leur format original (sans promesse de conversion ou de compatibilité Instagram).
 - Statistiques 7/30 jours : clics du jour, total de période, clics Story inclus dans ce total, graphique daté/chiffré et tableau accessible. Pas de « Stories déclarées », pas de métrique « Offres actives » dupliquée. Pas de top publications : attribution par publication non démontrée.
 - Installation PWA : invite navigateur quand disponible, instructions Safari/iOS ou Android sinon, état installé en mode autonome et sur événement `appinstalled`. Une installation antérieure ne peut pas être détectée universellement depuis tous les onglets et navigateurs.
+
+## Mises à jour PWA
+
+Le nouveau service worker attend une validation dans la notification « Mise à jour disponible ». Le rechargement est bloqué tant qu’une Story est en préparation, y compris si elle démarre pendant l’activation ; « Plus tard » conserve la page ouverte. Une validation dans un autre onglet ne recharge jamais celui qui contient une préparation. Après la confirmation manuelle de publication, la mise à jour peut être acceptée. Les préparations restent uniquement en mémoire : aucune sauvegarde persistante de média, lien ou donnée privée n’est ajoutée ; fermer l’application ou recharger manuellement peut toujours les perdre.
+
+Seuls le manifeste, les icônes et la page hors connexion avec sa feuille de style sont précachés, depuis une liste fixe et sans identifiants. Le téléchargement valide statut et type de contenu, refuse les redirections et expire après 15 secondes. Un échec laisse l’ancienne version active. Les caches PulSe précédents sont supprimés à l’activation, sans toucher aux autres caches. Incrémenter `VERSION` dans `sw.js` à chaque changement de ces ressources publiques. La recherche de mise à jour ignore le cache HTTP et reprend au retour en ligne/au premier plan, puis chaque heure visible.
+
+La recette navigateur couvre les vraies transitions du service worker, un échec d’installation, deux onglets avec photos/vidéos, la confirmation de rechargement, une préparation démarrée pendant l’activation, les zones `maskable`, le nettoyage et l’exclusion des données privées du cache, ainsi que la navigation hors connexion. Elle ne remplace pas l’installation physique sur Samsung derrière Pangolin.
 
 ## Parcours de publication
 

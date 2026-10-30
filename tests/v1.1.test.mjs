@@ -63,7 +63,7 @@ test('bridge: strict 7/30 stats, immutable video request, safe visual proxy and 
 test('PWA installation resources are available without credentials while the dashboard and APIs stay private',async()=>{
  const server=createPulseServer({user:'admin',password:'long-password-123'}),base=await open(server);
  try{
-  for(const path of ['/manifest.webmanifest','/icon.svg','/icon-192.png','/icon-512.png','/sw.js','/offline.html']){
+  for(const path of ['/manifest.webmanifest','/icon.svg','/icon-192.png','/icon-512.png','/icon-maskable-192.png','/icon-maskable-512.png','/sw.js','/offline.html','/offline.css']){
    const response=await fetch(base+path);
    assert.equal(response.status,200,'public PWA asset: '+path);
    if(path==='/manifest.webmanifest'){
@@ -71,7 +71,9 @@ test('PWA installation resources are available without credentials while the das
     const manifest=await response.json();
     assert.equal(manifest.display,'standalone');
     assert.equal(manifest.start_url,'/');
-    assert.deepEqual(manifest.icons.map(icon=>icon.sizes),['192x192','512x512']);
+    assert.deepEqual(manifest.icons.map(icon=>[icon.sizes,icon.purpose]),[['192x192','any'],['512x512','any'],['192x192','maskable'],['512x512','maskable']]);
+    assert.equal(manifest.id,'/');assert.equal(manifest.scope,'/');
+    assert.equal(manifest.theme_color,'#070c14');assert.equal(manifest.background_color,'#070c14');
    }
   }
   for(const path of ['/','/index.html','/app.js','/brand-pulse.png','/api/catalog','/api/stats','/api/visual']){
@@ -80,7 +82,6 @@ test('PWA installation resources are available without credentials while the das
   const html=await(await fetch(base+'/',{headers:{Authorization:auth}})).text();
   assert.match(html,/rel="manifest"[^>]*crossorigin="use-credentials"/);
   const sw=await(await fetch(base+'/sw.js')).text();
-  assert.match(sw,/pulse-public-v1\.1\.2/);
-  assert.doesNotMatch(sw,/PUBLIC_SHELL=[^;]*\/api\//);
+  assert.match(sw,/credentials: 'omit'/);
  }finally{await close(server)}
 });

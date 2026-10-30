@@ -1,8 +1,9 @@
 'use strict';
-import {installationHelp} from './pwa.mjs';
+import {installationHelp,watchUpdates} from './pwa.mjs';
 const $=id=>document.getElementById(id),number=new Intl.NumberFormat('fr-FR');
 let catalog={campaigns:[],trackedLinks:[]},selected=null,prepared=null,objectURL=null,revision=0,period=7,statsRevision=0,catalogRevision=0,mediaRevision=0,mediaFile=null,flow={copied:false,shared:false,downloaded:false,published:false};
 const editor=$('editor');
+let pwaUpdates;
 const message=text=>{$('story-status').textContent=text||''};
 function node(tag,cls,text){const el=document.createElement(tag);if(cls)el.className=cls;if(text!=null)el.textContent=text;return el}
 async function api(path,options={}){const r=await fetch(path,{cache:'no-store',...options});const data=await r.json();if(!r.ok)throw Error(data.error||'Connexion indisponible.');return data}
@@ -10,6 +11,7 @@ function canShareFile(file){try{return isSecureContext&&!!navigator.share&&!!nav
 function clearPrepared(){prepared=null;mediaFile=null;if(objectURL)URL.revokeObjectURL(objectURL);objectURL=null;flow={copied:false,shared:false,downloaded:false,published:false};$('preview').hidden=true;$('video-preview').hidden=true;$('video-preview').pause();$('video-preview').removeAttribute('src');$('story-link').value='';$('media-name').textContent='';$('manual-copy').hidden=true;$('retry-link').hidden=true;$('publication-check').checked=false;$('publication-receipt').textContent='';syncDraft()}
 function syncDraft(){const url=selected?.link||'';prepared=mediaFile&&url?{file:mediaFile,url}:null;$('story-link').value=url;$('copy').disabled=!url;$('share').disabled=!prepared||!flow.copied||!canShareFile(mediaFile);$('download').hidden=!mediaFile;
  $('draft-dot').hidden=!selected||flow.published;
+ pwaUpdates?.refreshDraft();
  const states={media:!!mediaFile,copy:flow.copied,share:flow.shared||flow.downloaded,publish:flow.published};
  for(const [name,complete]of Object.entries(states))$('step-'+name).dataset.state=complete?'complete':'pending';
  $('media-state').textContent=mediaFile?'Visuel prêt':'Choix / préparation';$('copy-state').textContent=flow.copied?'Lien copié':url?'Lien prêt':'Lien en attente';$('share-state').textContent=flow.shared?'Partage effectué':flow.downloaded?'Import manuel à faire':'Après copie du lien';$('publish-state').textContent=flow.published?'Déclaration enregistrée':'À faire dans Instagram';
@@ -80,4 +82,4 @@ $('refresh').onclick=()=>{refreshCatalog();refreshStats()};
 let installPrompt=null,installed=false;const displayMode=matchMedia('(display-mode: standalone)');function updateInstall(){const yes=installed||displayMode.matches||navigator.standalone===true;$('install').textContent=yes?'App installée':'Installer l’app';$('install').disabled=yes;if(yes)$('install-help').hidden=true}
 window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();installPrompt=event;updateInstall()});window.addEventListener('appinstalled',()=>{installed=true;installPrompt=null;updateInstall()});displayMode.addEventListener('change',updateInstall);
 $('install').onclick=async()=>{if(installPrompt){const current=installPrompt;installPrompt=null;try{await current.prompt();const choice=await current.userChoice;$('install-help').textContent=choice.outcome==='accepted'?'Installation demandée. Ouvrez PulSe depuis votre écran d’accueil.':'Installation annulée. Vous pouvez réessayer depuis le menu du navigateur.'}catch{$('install-help').textContent=installationHelp(navigator.userAgent,navigator.maxTouchPoints)}$('install-help').hidden=false;updateInstall();return}$('install-help').textContent=installationHelp(navigator.userAgent,navigator.maxTouchPoints);$('install-help').hidden=false};
-updateInstall();refreshCatalog();refreshStats();if(isSecureContext&&'serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+updateInstall();refreshCatalog();refreshStats();if(isSecureContext&&'serviceWorker'in navigator)pwaUpdates=watchUpdates({hasDraft:()=>!!selected&&!flow.published});

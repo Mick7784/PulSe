@@ -6,9 +6,9 @@ import { pathToFileURL } from 'node:url';
 import { httpURL, normalizeCatalog, normalizeTrackedLinks, normalizeStats, normalizeVideo, safeImageRef } from './catalog.mjs';
 
 const ROOT = new URL('./', import.meta.url);
-const STATIC = new Set(['index.html','app.js','pwa.mjs','style.css','brand-pulse.png','manifest.webmanifest','icon.svg','icon-192.png','icon-512.png','sw.js','offline.html']);
+const STATIC = new Set(['index.html','app.js','pwa.mjs','style.css','brand-pulse.png','manifest.webmanifest','icon.svg','icon-192.png','icon-512.png','icon-maskable-192.png','icon-maskable-512.png','sw.js','offline.html','offline.css']);
 // Public installation metadata only; application HTML, scripts and all APIs stay authenticated.
-const PUBLIC_PWA = new Set(['/manifest.webmanifest','/icon.svg','/icon-192.png','/icon-512.png','/sw.js','/offline.html']);
+const PUBLIC_PWA = new Set(['/manifest.webmanifest','/icon.svg','/icon-192.png','/icon-512.png','/icon-maskable-192.png','/icon-maskable-512.png','/sw.js','/offline.html','/offline.css']);
 const MIME = {html:'text/html; charset=utf-8',js:'text/javascript; charset=utf-8',mjs:'text/javascript; charset=utf-8',css:'text/css; charset=utf-8',webmanifest:'application/manifest+json',svg:'image/svg+xml',png:'image/png'};
 const HEADERS = {
   'Cache-Control':'no-store', 'Referrer-Policy':'no-referrer',

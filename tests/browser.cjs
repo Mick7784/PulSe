@@ -39,14 +39,14 @@ const close=s=>new Promise(r=>s.close(r));
   await mkdir(process.env.PULSE_SCREENSHOT_DIR||resolve(__dirname,'../../screenshots'),{recursive:true});
   await page.goto(base);await page.waitForFunction(()=>document.getElementById('stat-today').textContent==='6');
   // Real Chromium manifest/installability API: do not simulate beforeinstallprompt here.
-  await page.evaluate(()=>navigator.serviceWorker.ready);
+  await page.waitForFunction(async()=>!!(await navigator.serviceWorker.getRegistration())?.active);
   const cdp=await context.newCDPSession(page);
   const manifestState=await cdp.send('Page.getAppManifest');
   assert.equal(manifestState.errors.length,0,'Chromium rejected PulSe manifest: '+JSON.stringify(manifestState.errors));
   const appManifest=JSON.parse(manifestState.data);
   assert.equal(appManifest.display,'standalone');
   assert.equal(appManifest.start_url,'/');
-  assert.deepEqual(appManifest.icons.map(icon=>icon.sizes),['192x192','512x512']);
+  assert.deepEqual(appManifest.icons.map(icon=>[icon.sizes,icon.purpose]),[['192x192','any'],['512x512','any'],['192x192','maskable'],['512x512','maskable']]);
   const installability=await cdp.send('Page.getInstallabilityErrors');
   assert.deepEqual(installability.installabilityErrors,[],'Chromium PWA installation errors');
   await cdp.detach();
@@ -125,5 +125,5 @@ const close=s=>new Promise(r=>s.close(r));
   assert.deepEqual(errors,[]);await context.close();
   console.log('PASS: publication steps, legacy bridge diagnostic/retry, explicit manual confirmation, 15px mobile chart values, 30-day scrolling/touch detail, 1080x1920, photo/video and races, activation, cancellation, clipboard fallback, PWA and private cache exclusion. Fixtures only; no physical Samsung test.');
  }finally{if(browser)await browser.close();await close(pulse);await close(fake)}
-})().catch(e=>{console.error(e);process.exitCode=1});
+})().then(()=>require('./pwa-browser.cjs')()).catch(e=>{console.error(e);process.exitCode=1});
 

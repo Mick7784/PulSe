@@ -89,7 +89,11 @@ module.exports=async function(){
   assert.equal(loads,before,'waiting update must not reload');
   await page.locator('#update-later').click();assert.equal(await page.locator('#update-notice').isVisible(),false);
   const otherBefore=otherLoads;
-  await other.locator('#update-apply').click();await other.waitForFunction(()=>!!navigator.serviceWorker.controller&&document.getElementById('stat-today')?.textContent==='0');
+  await Promise.all([
+   other.waitForEvent('framenavigated',frame=>frame===other.mainFrame()),
+   other.locator('#update-apply').click()
+  ]);
+  await other.waitForFunction(()=>!!navigator.serviceWorker.controller&&document.getElementById('stat-today')?.textContent==='0');
   await page.waitForFunction(()=>!document.getElementById('update-notice').hidden);
   assert.equal(loads,before,'another tab may not reload the draft');
   assert.equal(otherLoads,otherBefore+1,'one explicit confirmation, one reload');
@@ -100,7 +104,11 @@ module.exports=async function(){
   await page.locator('#copy').click();await page.locator('#download').click();
   await page.locator('#publication-check').check();await page.locator('#confirm-publication').click();
   assert.equal(await page.locator('#update-apply').isEnabled(),true);
-  await page.locator('#update-apply').click();await page.waitForFunction(()=>document.getElementById('stat-today')?.textContent==='0'&&document.getElementById('editor').hidden);
+  await Promise.all([
+   page.waitForEvent('framenavigated',frame=>frame===page.mainFrame()),
+   page.locator('#update-apply').click()
+  ]);
+  await page.waitForFunction(()=>document.getElementById('stat-today')?.textContent==='0'&&document.getElementById('editor').hidden);
   assert.equal(loads,before+1,'completed draft permits a confirmed reload');
 
   await other.locator('#nav-stories').click();await other.locator('#tracked-links button').click();
@@ -112,7 +120,7 @@ module.exports=async function(){
   await page.locator('#nav-stories').click();
   const raceLoads=loads;
   await page.evaluate(()=>{document.getElementById('update-apply').click();document.querySelector('#tracked-links button').click()});
-  await page.waitForFunction(async()=>!(await navigator.serviceWorker.getRegistration()).waiting&&document.getElementById('update-apply').disabled);
+  await page.waitForFunction(async()=>{const reg=await navigator.serviceWorker.getRegistration();return !reg.waiting&&reg.active?.state==='activated'&&document.getElementById('update-apply').disabled});
   assert.equal(loads,raceLoads,'a newly started preparation must survive activation');
   assert.equal(await page.locator('#editor').isVisible(),true);
   assert.equal(otherLoads,videoLoads,'a video in another tab must not be reloaded');

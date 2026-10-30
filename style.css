@@ -1,4 +1,22 @@
 /* PulSe mobile: LinKs surfaces, official PulSe accents. */
+.link-zone { margin-top:20px; }
+.link-actions { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0; }
+.managed-link { padding:16px; border:1px solid var(--line); border-radius:14px; background:var(--surface); }
+.managed-link strong { font-size:1rem; }
+.managed-link p,.link-destination { overflow-wrap:anywhere; color:var(--muted); font-size:.8125rem; margin:7px 0; }
+.link-form { margin:18px 0; }
+.link-form fieldset { min-width:0; padding:0; margin:0; border:0; }
+.link-form label:not(.publication-check) { display:block; font-size:.875rem; font-weight:600; margin:14px 0 6px; }
+.link-form input:not([type=checkbox]),.link-form select { width:100%; min-width:0; min-height:46px; padding:11px; background:var(--bg); color:var(--text); border:1px solid var(--line); border-radius:10px; font:inherit; font-size:1rem; }
+.link-form select:focus-visible { outline:2px solid var(--focus); outline-offset:3px; }
+.link-form button { margin-top:10px; }
+.link-form .editor-heading { flex-wrap:wrap; }
+.link-preview { border-top:1px solid var(--line); padding-top:12px; margin-top:12px; }
+.link-preview a { display:block; overflow-wrap:anywhere; margin:8px 0; font-size:.875rem; }
+.link-warning { padding:12px; border:1px solid var(--pink); border-radius:10px; margin-top:12px; font-size:.8125rem; }
+.link-warning p { overflow-wrap:anywhere; margin-top:8px; }
+.link-duplicates { display:grid; gap:8px; margin:12px 0; font-size:.875rem; }
+.link-zone .search-label { margin-top:22px; }
 .update-notice {
   margin-bottom:18px;
   padding:12px;
@@ -859,7 +877,7 @@ footer {
   left:50%;
   transform:translateX(-50%);
   display:grid;
-  grid-template-columns:1fr 1fr;
+  grid-template-columns:repeat(3,minmax(0,1fr));
   gap:8px;
   width:min(100%,480px);
   padding:8px max(16px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));
@@ -873,7 +891,8 @@ footer {
   display:flex;
   align-items:center;
   justify-content:center;
-  gap:9px;
+  gap:6px;
+  padding-inline:6px;
   min-height:48px;
   border:1px solid transparent;
   background:transparent;

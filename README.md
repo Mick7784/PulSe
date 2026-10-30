@@ -39,9 +39,11 @@ Les valeurs de l’histogramme sont blanches, contrastées et rendues à **15 pi
 
 ## Prérequis LinKs
 
+**Phase 5 (branche de développement uniquement)** : création, modification et partage depuis l'onglet Liens, via le moteur commun LinKs. Cette fonctionnalité nécessite l'extension dédiée de LinKs au-delà de V1.327 ; voir [le contrat, les tests réels, les limites et le retour arrière](docs/LIENS-PHASE5.md). Aucune release ni mise en production n'est réalisée dans cette phase.
+
 LinKs V1.315 possède la passerelle privée de base. LinKs V1.316 ajoute `GET /api/pulse/stats?days=7|30` et le type `youtube` de `POST /api/pulse/story-link`. **La préparation YouTube et les statistiques sur 30 jours nécessitent LinKs V1.316 effectivement déployée.** PulSe reste explicite si elle est absente et ne fabrique pas de données ou de lien non suivi.
 
-Les métadonnées proviennent de `/latest-video.json` de LinKs ; aucune deuxième clé YouTube ni connexion Meta n’est ajoutée. À la préparation explicite d’une vidéo, LinKs crée/réutilise un lien privé avec destination fixée à cette vidéo, catégorie YouTube et source Instagram Story. Les jetons des anciennes offres et des anciens liens restent réutilisés. Ce suivi est par contenu/source, pas par publication Instagram.
+Les métadonnées proviennent de `/latest-video.json` de LinKs ; aucune deuxième clé YouTube ni connexion Meta n’est ajoutée. À la préparation explicite d’une vidéo, LinKs crée/réutilise un lien privé avec destination fixée à cette vidéo et source Instagram Story. Les catégories ont été supprimées dans LinKs V1.327. Les jetons des anciennes offres et des anciens liens restent réutilisés. Ce suivi est par contenu/source, pas par publication Instagram.
 
 ## Variables et déploiement, après validation uniquement
 

@@ -1,9 +1,11 @@
 'use strict';
 import {installationHelp,watchUpdates} from './pwa.mjs';
+import {initLinkManager} from './link-manager.js';
 const $=id=>document.getElementById(id),number=new Intl.NumberFormat('fr-FR');
 let catalog={campaigns:[],trackedLinks:[]},selected=null,prepared=null,objectURL=null,revision=0,period=7,statsRevision=0,catalogRevision=0,mediaRevision=0,mediaFile=null,flow={copied:false,shared:false,downloaded:false,published:false};
 const editor=$('editor');
 let pwaUpdates;
+const linkManager=initLinkManager({onDraft:()=>pwaUpdates?.refreshDraft(),onSaved:()=>refreshCatalog()});
 const message=text=>{$('story-status').textContent=text||''};
 function node(tag,cls,text){const el=document.createElement(tag);if(cls)el.className=cls;if(text!=null)el.textContent=text;return el}
 async function api(path,options={}){
@@ -26,22 +28,24 @@ function syncDraft(){const url=selected?.link||'';prepared=mediaFile&&url?{file:
  $('publication-state').textContent=flow.published?'Terminée sur cet appareil':prepared?'Prête à publier':mediaFile?'Visuel prêt · lien en attente':'En préparation';const canFinish=!!prepared&&flow.copied&&states.share;$('publication-check').disabled=!canFinish||flow.published;$('confirm-publication').disabled=!canFinish||!$('publication-check').checked||flow.published;
 }
 let activeView='stats';
-const viewScroll={stats:0,stories:0};
+const viewScroll={stats:0,stories:0,links:0};
 function showView(view){
  if(view===activeView)return;
  viewScroll[activeView]=window.scrollY;activeView=view;
- for(const name of ['stats','stories']){
+ for(const name of ['stats','stories','links']){
   $(name+'-view').hidden=name!==view;
   const button=$('nav-'+name);if(name===view)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');
  }
  $('story-panel').hidden=view!=='stories';$('story-toggle').setAttribute('aria-expanded',String(view==='stories'));
- document.title='PulSe — '+(view==='stats'?'Statistiques':'Stories');
+ document.title='PulSe — '+({stats:'Statistiques',stories:'Stories',links:'Liens'}[view]);
+ if(view==='links')linkManager.enter();
  document.querySelector('.skip-link').href='#view-'+view+'-title';
  $('view-'+view+'-title').focus({preventScroll:true});
  window.scrollTo({top:viewScroll[view],behavior:'instant'});
 }
 $('story-toggle').onclick=()=>showView('stories');
 $('nav-stats').onclick=()=>showView('stats');$('nav-stories').onclick=()=>showView('stories');
+$('nav-links').onclick=()=>showView('links');
 function chain(){const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('aria-hidden','true');svg.classList.add('chain-icon');const p=document.createElementNS(svg.namespaceURI,'path');p.setAttribute('d','M10 13a5 5 0 0 0 7 .2l3-3a5 5 0 0 0-7-7l-2 2M14 11a5 5 0 0 0-7-.2l-3 3a5 5 0 0 0 7 7l2-2');p.setAttribute('fill','none');p.setAttribute('stroke','currentColor');p.setAttribute('stroke-width','1.8');svg.append(p);return svg}
 const itemKey=item=>item.type+':'+item.id;
 function renderList(name,items){const root=$(name);root.replaceChildren();if(!items.length){root.append(node('p','empty',name==='campaigns'?'Aucune offre active.':catalog.trackedAvailable?'Aucun lien correspondant.':'Liens suivis momentanément indisponibles.'));return}
@@ -90,4 +94,4 @@ $('refresh').onclick=()=>{refreshCatalog();refreshStats()};
 let installPrompt=null,installed=false;const displayMode=matchMedia('(display-mode: standalone)');function updateInstall(){const yes=installed||displayMode.matches||navigator.standalone===true;$('install').textContent=yes?'App installée':'Installer l’app';$('install').disabled=yes;if(yes)$('install-help').hidden=true}
 window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();installPrompt=event;updateInstall()});window.addEventListener('appinstalled',()=>{installed=true;installPrompt=null;updateInstall()});displayMode.addEventListener('change',updateInstall);
 $('install').onclick=async()=>{if(installPrompt){const current=installPrompt;installPrompt=null;try{await current.prompt();const choice=await current.userChoice;$('install-help').textContent=choice.outcome==='accepted'?'Installation demandée. Ouvrez PulSe depuis votre écran d’accueil.':'Installation annulée. Vous pouvez réessayer depuis le menu du navigateur.'}catch{$('install-help').textContent=installationHelp(navigator.userAgent,navigator.maxTouchPoints)}$('install-help').hidden=false;updateInstall();return}$('install-help').textContent=installationHelp(navigator.userAgent,navigator.maxTouchPoints);$('install-help').hidden=false};
-updateInstall();refreshCatalog();refreshStats();if(isSecureContext&&'serviceWorker'in navigator)pwaUpdates=watchUpdates({hasDraft:()=>!!selected&&!flow.published});
+updateInstall();refreshCatalog();refreshStats();if(isSecureContext&&'serviceWorker'in navigator)pwaUpdates=watchUpdates({hasDraft:()=>!!selected&&!flow.published||linkManager.hasDraft()});

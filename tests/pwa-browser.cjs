@@ -16,6 +16,7 @@ module.exports=async function(){
   if(path==='/api/public-config')return json({links:[]});
   if(path==='/latest-video.json')return json(null);
   if(path==='/api/pulse/links')return json({links:[{id:'draft',name:'Lien de recette',url:'https://example.com',enabled:true,archived:false}]});
+  if(path==='/api/pulse/link-manager')return json({version:1,items:[],partners:[],sources:[]});
   if(path==='/api/pulse/story-link')return json({url:'https://links.example/test12345'});
   if(path==='/api/pulse/stats')return json({period:7,total:0,today:0,last7:0,stories:0,days:Array.from({length:7},(_,i)=>({date:'2026-10-'+(20+i),clicks:0}))});
   return new Response('{}',{status:404});
@@ -175,6 +176,26 @@ module.exports=async function(){
   assert.equal(networkLoads,networkBefore);assert.equal(otherLoads,videoLoads);
   await networkDraft.close();
 
+  // A link form is also a private draft, protected across another tab's real activation.
+  const linkDraft=await context.newPage(),clean=await context.newPage();let linkLoads=0;
+  linkDraft.on('framenavigated',frame=>{if(frame===linkDraft.mainFrame())linkLoads++});
+  await linkDraft.goto(base);await clean.goto(base);
+  await linkDraft.locator('#nav-links').click();await linkDraft.locator('#link-new').click();
+  await linkDraft.locator('#link-name').fill('Saisie à conserver pendant une mise à jour');
+  const linkBefore=linkLoads;
+  build=5;await update(clean);await linkDraft.waitForFunction(()=>!document.getElementById('update-notice').hidden);
+  assert.equal(await linkDraft.locator('#update-apply').isDisabled(),true);
+  await Promise.all([clean.waitForEvent('framenavigated',frame=>frame===clean.mainFrame()),clean.locator('#update-apply').click()]);
+  await linkDraft.waitForFunction(async()=>!(await navigator.serviceWorker.getRegistration()).waiting);
+  assert.equal(linkLoads,linkBefore);assert.equal(await linkDraft.locator('#link-name').inputValue(),'Saisie à conserver pendant une mise à jour');
+  assert.equal(await linkDraft.locator('#update-apply').isDisabled(),true);
+  linkDraft.once('dialog',dialog=>dialog.dismiss());await linkDraft.locator('#link-close').click();
+  assert.equal(await linkDraft.locator('#link-form').isVisible(),true,'cancel discard retains draft');
+  linkDraft.once('dialog',dialog=>dialog.accept());await linkDraft.locator('#link-close').click();
+  assert.equal(await linkDraft.locator('#update-apply').isEnabled(),true);
+  await Promise.all([linkDraft.waitForEvent('framenavigated',frame=>frame===linkDraft.mainFrame()),linkDraft.locator('#update-apply').click()]);
+  assert.equal(linkLoads,linkBefore+1);await linkDraft.close();await clean.close();
+
   // Real offline navigation and exclusion of all private or query-bearing requests.
   const offline=await context.newPage();await offline.goto(base);await offline.waitForFunction(()=>document.getElementById('stat-today')?.textContent==='0');
   await offline.evaluate(async()=>{await Promise.all(['/api/catalog','/api/stats','/api/visual?id=test','/app.js','/style.css','/brand-pulse.png','/manifest.webmanifest?private=1'].map(url=>fetch(url).catch(()=>{})))});
@@ -183,7 +204,7 @@ module.exports=async function(){
    for(const key of keys.filter(key=>key.startsWith('pulse-')))for(const req of await(await caches.open(key)).keys())assets.push(new URL(req.url).pathname);
    return {keys,assets,local:localStorage.length,databases:(await indexedDB.databases()).length};
   });
-  assert.deepEqual(cacheState.keys.sort(),['another-app','pulse-public-pwa3-test-4']);
+  assert.deepEqual(cacheState.keys.sort(),['another-app','pulse-public-pwa3-test-5']);
   assert.deepEqual(cacheState.assets.sort(),['/manifest.webmanifest','/icon.svg','/icon-192.png','/icon-512.png','/icon-maskable-192.png','/icon-maskable-512.png','/offline.html','/offline.css'].sort());
   assert.equal(cacheState.local,0);assert.equal(cacheState.databases,0);
   await context.setOffline(true);await offline.reload();

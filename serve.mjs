@@ -4,9 +4,10 @@ import { timingSafeEqual } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { httpURL, normalizeCatalog, normalizeTrackedLinks, normalizeStats, normalizeVideo, safeImageRef } from './catalog.mjs';
+import {managerRequest,managerResponse,matches} from './link-api.mjs';
 
 const ROOT = new URL('./', import.meta.url);
-const STATIC = new Set(['index.html','app.js','pwa.mjs','style.css','brand-pulse.png','manifest.webmanifest','icon.svg','icon-192.png','icon-512.png','icon-maskable-192.png','icon-maskable-512.png','sw.js','offline.html','offline.css']);
+const STATIC = new Set(['index.html','app.js','link-manager.js','pwa.mjs','style.css','brand-pulse.png','manifest.webmanifest','icon.svg','icon-192.png','icon-512.png','icon-maskable-192.png','icon-maskable-512.png','sw.js','offline.html','offline.css']);
 // Public installation metadata only; application HTML, scripts and all APIs stay authenticated.
 const PUBLIC_PWA = new Set(['/manifest.webmanifest','/icon.svg','/icon-192.png','/icon-512.png','/icon-maskable-192.png','/icon-maskable-512.png','/sw.js','/offline.html','/offline.css']);
 const MIME = {html:'text/html; charset=utf-8',js:'text/javascript; charset=utf-8',mjs:'text/javascript; charset=utf-8',css:'text/css; charset=utf-8',webmanifest:'application/manifest+json',svg:'image/svg+xml',png:'image/png'};
@@ -50,6 +51,8 @@ export function createPulseServer({ user='',password='', linksURL='http://domoti
         try{const body=JSON.parse((await boundedBytes(r,8192)).toString('utf8'));
           error.unsupported=body.error==='Type PulSe invalide';
           error.changed=body.error==='La dernière vidéo a changé : actualisez PulSe';
+          error.code=['DUPLICATE','REVIEW_REQUIRED'].includes(body.code)?body.code:'';
+          if(error.code==='DUPLICATE')error.duplicates=matches(body.duplicates);
         }catch{}
         throw error;
       }
@@ -82,6 +85,29 @@ export function createPulseServer({ user='',password='', linksURL='http://domoti
       res.writeHead(401,{...HEADERS,'WWW-Authenticate':'Basic realm="PulSe", charset="UTF-8"'});return res.end('Connexion requise.');
     }
     try {
+      const action=route.pathname.slice('/api/'.length),managed=['link-manager','link-preview','link-save','link-token'].includes(action)&&route.pathname==='/api/'+action;
+      if(req.method==='POST'&&(managed||route.pathname==='/api/story-link')){
+        if(!req.headers['content-type']?.startsWith('application/json'))return responseJson(res,415,{error:'JSON requis.'});
+        if(req.headers.origin){let origin;try{origin=new URL(req.headers.origin).host}catch{return responseJson(res,403,{error:'Origine invalide.'})}if(origin!==req.headers.host)return responseJson(res,403,{error:'Origine externe interdite.'})}
+        if(req.headers['sec-fetch-site']==='cross-site'||req.headers['x-pulse-request']!=='1')return responseJson(res,403,{error:'Requête PulSe requise.'});
+      }
+      if(managed){
+        if(req.method!==(action==='link-manager'?'GET':'POST'))return responseJson(res,405,{error:'Méthode non autorisée.'});
+        if(!bridgeToken)return responseJson(res,503,{error:'Connexion sécurisée LinKs nécessaire.'});
+        let data;
+        if(req.method==='POST'){try{data=managerRequest(await readJson(req,32768))}catch{return responseJson(res,400,{error:'Demande invalide ou trop volumineuse.'})}}
+        try{
+          const result=managerResponse(action,await requestLinks('/api/pulse/'+action,{method:req.method,data,privateAccess:true}));
+          if(action==='link-save')catalogCache.until=0;
+          return responseJson(res,200,result);
+        }catch(error){
+          if(error.code==='DUPLICATE')return responseJson(res,409,{code:error.code,error:'Cette destination existe déjà. Réutilisez un lien ci-dessous.',duplicates:error.duplicates});
+          if(error.code==='REVIEW_REQUIRED')return responseJson(res,409,{code:error.code,error:'Le lien ou son aperçu a changé. Vérifiez à nouveau les informations dans LinKs avant de continuer.'});
+          if(error.status===400)return responseJson(res,400,{error:'Vérifiez le nom, la destination finale et les confirmations. Si la détection est ambiguë, choisissez un partenaire manuellement.'});
+          if(error.status===404)return responseJson(res,503,{error:'Cette fonction nécessite le nouveau bridge LinKs. Les Stories et statistiques restent disponibles.'});
+          return responseJson(res,503,{error:'Connexion LinKs indisponible. Votre saisie est conservée ; réessayez après reconnexion.'});
+        }
+      }
       if(req.method==='GET'&&route.pathname==='/api/catalog') {
         try{return responseJson(res,200,await loadCatalog(route.searchParams.get('refresh')==='1'))}
         catch{return responseJson(res,503,{error:'LinKs momentanément inaccessible : vérifie LINKS_PUBLIC_URL.'})}
@@ -95,9 +121,6 @@ export function createPulseServer({ user='',password='', linksURL='http://domoti
         catch {return responseJson(res,200,{available:false,reason:'La passerelle statistique LinKs ne répond pas.'})}
       }
       if(req.method==='POST'&&route.pathname==='/api/story-link') {
-        if(!req.headers['content-type']?.startsWith('application/json'))return responseJson(res,415,{error:'JSON requis.'});
-        if(req.headers.origin){let origin;try{origin=new URL(req.headers.origin).host}catch{return responseJson(res,403,{error:'Origine invalide.'})}if(origin!==req.headers.host)return responseJson(res,403,{error:'Origine externe interdite.'})}
-        if(req.headers['sec-fetch-site']==='cross-site'||req.headers['x-pulse-request']!=='1')return responseJson(res,403,{error:'Requête PulSe requise.'});
         let body;try{body=await readJson(req)}catch{return responseJson(res,400,{error:'Demande JSON invalide ou trop volumineuse.'})}
         if(!body||!['campaign','independent','youtube'].includes(body.type)||typeof body.id!=='string'||body.id.length>100)return responseJson(res,400,{error:'Contenu PulSe invalide.'});
         const cat=await loadCatalog();

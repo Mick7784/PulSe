@@ -15,7 +15,7 @@ export function watchUpdates({hasDraft}) {
  function render(){
   notice.hidden=!available()||dismissed;
   apply.disabled=applying||hasDraft()||!navigator.onLine;
-  text.textContent=hasDraft()?'Terminez votre Story avant de mettre à jour. Votre préparation reste ouverte.':
+  text.textContent=hasDraft()?'Terminez votre préparation avant de mettre à jour. Votre saisie reste ouverte.':
    !navigator.onLine?'Reconnectez-vous pour appliquer la mise à jour.':
    applying?'Mise à jour en cours…':'Une nouvelle version est prête. Rechargez PulSe quand vous le souhaitez.';
  }

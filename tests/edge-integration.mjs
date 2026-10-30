@@ -35,7 +35,7 @@ try{
  docker(['network','create',network]);
  start(links,['-v',root+':/fixture:ro','-e','PULSE_BRIDGE_TOKEN='+secret,'pulse-validation','node','/fixture/links.mjs']);
  start(pulse,['--read-only','--cap-drop','ALL','--security-opt','no-new-privileges:true','-e','PULSE_TEST_USER=admin','-e','PULSE_TEST_PASSWORD='+password,'-e','PULSE_BRIDGE_TOKEN='+secret,'-e','LINKS_PUBLIC_URL=http://'+links+':8080','-e','LINKS_BRIDGE_URL=http://'+links+':8080','pulse-validation']);
- start(proxy,['-p','127.0.0.1::8080','-p','127.0.0.1::8443','-p','127.0.0.1::8444','-v',root+':/config:ro','traefik:v3.7.17','--entrypoints.public-http.address=:8080','--entrypoints.public-https.address=:8443','--entrypoints.private-https.address=:8444','--providers.file.filename=/config/dynamic.yaml','--log.level=ERROR']);
+ start(proxy,['-p','127.0.0.1::8080','-p','127.0.0.1::8443','-p','127.0.0.1::8444','-v',root+':/config:ro','traefik:v3.6.1','--entrypoints.public-http.address=:8080','--entrypoints.public-https.address=:8443','--entrypoints.private-https.address=:8444','--providers.file.filename=/config/dynamic.yaml','--log.level=ERROR']);
  const port=p=>Number(docker(['port',proxy,p+'/tcp']).split(':').at(-1));
  const ports={http:port(8080),https:port(8443),private:port(8444)};
  const request=(side,host,path,headers={},method='GET',body)=>new Promise((resolve,reject)=>{
@@ -77,7 +77,7 @@ try{
  const compose=JSON.parse(execFileSync('docker',['compose','-f',resolve('security/compose.private.yaml'),'config','--format','json'],{env,encoding:'utf8'}));
  assert.ok(!compose.services.pulse.ports?.length);assert.equal(compose.services.pulse.environment.PULSE_REQUIRE_AUTH,'1');
  assert.equal(compose.services.pulse.labels['traefik.enable'],'false');
- console.log('PASS actual Traefik 3.7.17: HTTP/HTTPS denial, encoded paths, old public routes, spoofed headers, internal bridge, Basic, public LinKs and short-link contracts, private Compose. VPN and production not tested.');
+ console.log('PASS actual Traefik 3.6.1: HTTP/HTTPS denial, encoded paths, old public routes, spoofed headers, internal bridge, Basic, public LinKs and short-link contracts, private Compose. VPN and production not tested.');
 }catch(error){
  for(const name of started){try{console.error(name,docker(['logs',name]))}catch{}}
  throw error;

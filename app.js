@@ -29,8 +29,9 @@ function syncDraft(){const url=selected?.link||'';prepared=!mediaBusy&&mediaFile
 }
 let activeView='stats';
 const viewScroll={stats:0,stories:0,links:0};
-function showView(view){
- if(view===activeView)return;
+function showView(view,{fromHistory=false}={}){
+ if(!['stats','stories','links'].includes(view)||view===activeView)return;
+ if(!fromHistory)history.pushState({pulseView:view},'');
  if(activeView==='links')linkManager.endStory();
  viewScroll[activeView]=window.scrollY;activeView=view;
  for(const name of ['stats','stories','links']){
@@ -44,6 +45,9 @@ function showView(view){
  $('view-'+view+'-title').focus({preventScroll:true});
  window.scrollTo({top:viewScroll[view],behavior:'instant'});
 }
+history.replaceState({pulseView:activeView},'');
+history.scrollRestoration='manual';
+window.addEventListener('popstate',event=>showView(event.state?.pulseView||'stats',{fromHistory:true}));
 $('nav-stats').onclick=()=>showView('stats');$('nav-stories').onclick=()=>showView('stories');
 $('nav-links').onclick=()=>showView('links');
 $('story-create-link').onclick=()=>{linkManager.beginStory();showView('links')};

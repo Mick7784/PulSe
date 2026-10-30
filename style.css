@@ -1005,7 +1005,7 @@ footer {
 :root { --header-height:calc(72px + env(safe-area-inset-top)); --nav-height:calc(66px + env(safe-area-inset-bottom)); }
 html { scroll-padding-top:calc(var(--header-height) + 12px); scroll-padding-bottom:calc(var(--nav-height) + 12px); }
 .shell { padding-top:calc(var(--header-height) + 12px); padding-bottom:calc(var(--nav-height) + 16px); }
-.topbar { position:fixed; top:0; left:50%; transform:translateX(-50%); width:min(100%,480px); height:var(--header-height); min-height:0; padding:env(safe-area-inset-top) max(12px,env(safe-area-inset-right)) 0 max(12px,env(safe-area-inset-left)); margin:0; background:var(--bg); z-index:10; }
+.topbar { position:fixed; top:0; left:50%; transform:translateX(-50%); width:min(100%,480px); height:auto; min-height:var(--header-height); padding:env(safe-area-inset-top) max(12px,env(safe-area-inset-right)) 0 max(12px,env(safe-area-inset-left)); margin:0; background:var(--bg); z-index:10; }
 .brand { width:156px; }
 .view-heading { margin-bottom:8px; }
 .view-heading h2 { font-size:1.25rem; }
@@ -1031,3 +1031,5 @@ html { scroll-padding-top:calc(var(--header-height) + 12px); scroll-padding-bott
 .today-ranking summary { min-height:44px; padding-block:10px; cursor:pointer; color:var(--accent); }
 #insights-links .selection-copy { overflow-wrap:anywhere; }
 .selection-list { grid-template-columns:minmax(0,1fr); } .managed-link { min-width:0; }
+
+.topbar h1 { min-width:0; flex:1; }

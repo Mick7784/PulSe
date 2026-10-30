@@ -28,6 +28,8 @@ Les préparations restent en mémoire pendant une erreur réseau, une navigation
 
 API, formulaires, liens, médias et scripts authentifiés restent exclus du cache du service worker. Aucun localStorage, IndexedDB, base parallèle ni accès admin LinKs n'est ajouté. La configuration privée préparée en phase 4, y compris le refus externe de `/api/pulse/`, reste inchangée et doit toujours être validée sur le VPS avant activation réelle.
 
+Le marqueur du service worker passe à `pwa5-1` pour annoncer cette version aux pages déjà ouvertes, avec les confirmations et protections de brouillon existantes. Sa liste de ressources publiques autorisées au cache ne change pas.
+
 ## Validation reproductible
 
 - `node --test tests/*.test.mjs` : 14 tests, dont les nouvelles limites de routes, CSRF, refus d'accès, projections et erreurs sans secret.

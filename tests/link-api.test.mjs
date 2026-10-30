@@ -25,7 +25,7 @@ test('link bridge confines routes, credentials, fields and failures to its publi
   }
   assert.equal(calls.length,0);
   const catalog=await request('/api/link-manager');assert.equal(catalog.status,200);assert.equal(catalog.headers.get('cache-control'),'no-store');
-  const catalogText=await catalog.text();assert.ok(!catalogText.includes(secret));assert.ok(!catalogText.includes('template'));assert.ok(!catalogText.includes('admin_session'));
+  const catalogText=await catalog.text();assert.ok(!catalogText.includes(secret));assert.ok(!catalogText.includes('template'));assert.ok(!catalogText.includes('admin_session'));assert.equal(JSON.parse(catalogText).items[0].url,'https://example.com');
   assert.equal(calls[0].url,'http://private.test/api/pulse/link-manager');assert.equal(calls[0].opts.headers.Authorization,'Bearer '+secret);assert.equal(calls[0].opts.redirect,'error');
   upstream={url:'https://links.example/alias123',source_id:'source',token:secret};
   const token=await request('/api/link-token',{id:'existing',source_id:'source',expected_url:'https://example.com',admin:true,allow_duplicate:true,duplicate_ids:['other']});

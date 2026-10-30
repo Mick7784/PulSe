@@ -87,6 +87,10 @@ const {chromium}=require('playwright');
   const stored=await page.evaluate(async()=>({local:localStorage.length,dbs:(await indexedDB.databases()).length,paths:(await Promise.all((await caches.keys()).map(async k=>(await(await caches.open(k)).keys()).map(r=>new URL(r.url).pathname)))).flat()}));
   assert.equal(stored.local,0);assert.equal(stored.dbs,0);assert.ok(!stored.paths.some(p=>p.startsWith('/api/')||p==='/link-manager.js'));
   await page.locator('#link-close').click();if(process.env.PULSE_SCREENSHOT_DIR)await page.screenshot({path:join(process.env.PULSE_SCREENSHOT_DIR,'pulse-liens-liste.png'),fullPage:true});
+  // The UI must retain the exact engine string, including a homepage without '/'.
+  await newForm('Accueil sans chemin','https://HOME.example');await preview('https://HOME.example');await page.locator('#link-reviewed').check();await page.locator('#link-save').click();await page.locator('#link-share-panel').waitFor({state:'visible'});
+  await page.locator('#link-source').selectOption(source('instagram'));await page.locator('#link-generate').click();await page.waitForFunction(()=>!!document.getElementById('link-short').value);
+  await page.locator('.managed-link').filter({hasText:'Accueil sans chemin'}).getByRole('button',{name:'Modifier'}).click();await preview('https://HOME.example');assert.equal(await page.locator('#link-change-warning').isVisible(),false);
   assert.deepEqual(errors,[]);
   console.log('PASS REAL LinKs + PulSe + SQLite + Chromium: affiliation/manual/None, preview confirmation, create/edit, transaction duplicates and reuse, lost committed response, source tokens, legacy aliases/statistics, authentication, clipboard fallback, offline drafts, stale previews, mobile widths and no private cache. No physical Samsung test.');
  }finally{

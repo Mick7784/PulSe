@@ -25,7 +25,7 @@ module.exports=async function(){
  const server=http.createServer((req,res)=>{
   if(req.url==='/sw.js'){
    res.writeHead(200,{'Content-Type':'text/javascript','Cache-Control':'no-store'});
-   return res.end(build===0?legacySource:source.replace("const VERSION = 'pwa3-1';",`const VERSION = 'pwa3-test-${build}';`));
+   return res.end(build===0?legacySource:source.replace(/const VERSION = '[^']+';/,`const VERSION = 'pwa3-test-${build}';`));
   }
   if(req.url==='/icon-maskable-512.png'&&failAsset){res.writeHead(503);return res.end('unavailable')}
   handler(req,res);

@@ -9,11 +9,14 @@
 <section id="stories-view" class="story-zone" aria-labelledby="view-stories-title" hidden><div class="view-heading"><div><p class="eyebrow">Votre prochaine publication</p><h2 id="view-stories-title" tabindex="-1">Préparer une Story</h2></div><span class="platform-badge">Instagram</span></div><p class="view-intro">Choisissez un contenu pour commencer.</p>
 <div id="story-panel" class="story-panel" hidden>
 <div class="section-heading"><div class="section-title"><span class="source-icon source-youtube" aria-hidden="true">▶</span><h3>Dernière vidéo YouTube</h3></div></div><div id="latest-video" class="video-card"></div>
-<div class="section-heading spaced"><div class="section-title"><span class="source-icon source-campaign" aria-hidden="true">%</span><h3>Offres actives</h3></div><span id="offers-count" class="count">—</span></div><div id="campaigns" class="selection-list"></div>
+<div class="section-heading spaced"><div class="section-title"><span class="source-icon source-campaign" aria-hidden="true">%</span><h3>Offres actives</h3></div><span id="offers-count" class="count">—</span></div>
+<label class="search-label"><span class="sr-only">Rechercher une campagne</span><input id="campaign-search" type="search" placeholder="Rechercher une offre…" autocomplete="off"></label><div id="campaigns" class="selection-list"></div>
 <div class="section-heading spaced"><div class="section-title"><span class="source-icon source-link" aria-hidden="true">↗</span><h3>Liens suivis</h3></div><span id="links-count" class="count">—</span></div>
+<button id="story-create-link" class="secondary" type="button">Créer ou réutiliser un lien pour ma Story</button>
 <label class="search-label"><span class="sr-only">Rechercher un lien par nom</span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg><input id="link-search" type="search" placeholder="Rechercher un lien…" autocomplete="off" enterkeyhint="search"></label><div id="tracked-links" class="selection-list"></div>
 <section id="editor" class="editor" aria-labelledby="editor-title" hidden>
 <div class="editor-heading"><div><p class="eyebrow">Publication guidée</p><h4 id="editor-title" tabindex="-1"></h4></div><span id="publication-state" class="publication-state">En préparation</span></div>
+<div id="campaign-details" class="campaign-details" hidden></div>
 <p id="story-status" class="work-status" role="status" aria-live="polite"></p><button id="retry-link" class="secondary" type="button" hidden>Réessayer la préparation du lien</button>
 <ol class="publication-steps">
 <li id="step-media" data-state="current"><div class="step-heading"><span class="step-number">1</span><h5>Préparer le visuel</h5><span id="media-state" class="step-state">Préparation…</span></div>
@@ -33,6 +36,7 @@
 <div class="view-heading"><div><p class="eyebrow">Vos liens, partout</p><h2 id="view-links-title" tabindex="-1">Liens suivis</h2></div><span class="service-badge">LinKs</span></div>
 <p class="view-intro">Créez votre lien, vérifiez sa destination et choisissez sa source de suivi.</p>
 <p id="links-status" class="connection-status" role="status"></p>
+<div id="link-story-context" class="work-status" hidden><p>Choisissez ou créez le lien de votre Story. Votre préparation reste ouverte.</p><button id="link-story-back" class="secondary" type="button">Retour à ma Story</button></div>
 <div class="link-actions"><button id="link-new" type="button" disabled>+ Nouveau lien</button><button id="links-retry" class="secondary" type="button">Actualiser les liens</button></div>
 <form id="link-form" class="editor link-form" aria-labelledby="link-form-title" hidden>
 <div class="editor-heading"><h3 id="link-form-title">Nouveau lien</h3><button id="link-close" type="button" class="secondary">Fermer</button></div>
@@ -49,6 +53,7 @@
 <button id="link-save" type="submit" disabled>Enregistrer dans LinKs</button>
 </fieldset></form>
 <section id="link-share-panel" class="editor link-form" aria-labelledby="link-share-title" hidden><p class="eyebrow">Partager un lien</p><h3 id="link-share-title"></h3><p id="link-share-destination" class="link-destination"></p>
+<button id="link-use-story" class="secondary" type="button">Utiliser dans une Story Instagram</button>
 <label for="link-source">Plateforme / source de suivi</label><select id="link-source"><option value="">Choisir une source…</option></select>
 <button id="link-generate" type="button">Obtenir le lien court</button><label for="link-short" class="small-note">Lien court pour la source sélectionnée</label><input id="link-short" class="story-link" readonly>
 <button id="link-copy" type="button" disabled>Copier le lien court</button><button id="link-copy-manual" type="button" class="secondary" hidden>J’ai copié le lien manuellement</button><p id="link-share-status" role="status" class="work-status"></p></section>

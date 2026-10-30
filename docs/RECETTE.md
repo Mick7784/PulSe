@@ -30,6 +30,16 @@ Safari → Partager → Sur l’écran d’accueil. Tester onglet et mode instal
 
 ## Vérification finale
 
+### Complément phase 6 — à réaliser sur Samsung
+
+1. Avec au moins cinq campagnes éligibles dans LinKs, retrouver une campagne hors des trois emplacements publics, y compris une campagne historique `featured`. Rechercher son titre ou code promo ; vérifier son visuel spécifique ou par défaut et les informations dans la préparation.
+2. Choisir une photo, puis un fichier illisible : conserver la photo et son lien. Annuler le remplacement de toute la préparation : rien ne doit disparaître. Refaire avec une vidéo compatible du téléphone.
+3. Pendant la Story, créer un lien puis revenir avec le lien sélectionné et le même média. Refaire avec un doublon et un lien existant. Annuler la confirmation : conserver les deux préparations. Couper le VPN pendant l'enregistrement, revenir à la Story puis reprendre la saisie sans création automatique au retour du réseau.
+4. Retirer une campagne dans LinKs pendant une préparation dont le lien a échoué : le réessai doit être refusé et le média conservé. Réactualiser le catalogue sans perdre la préparation. Pour une image distante non prise en charge, choisir un média du téléphone.
+5. Refuser la copie, confirmer la copie manuelle, annuler puis réussir le partage natif. Vérifier dans Instagram le fichier, le sticker ajouté manuellement et la bonne destination. La confirmation PulSe reste une déclaration manuelle, sans publication automatisée. Vérifier le retour de la PWA et une mise à jour avec une Story et une saisie de lien ouvertes.
+
+La phase 6 n'ajoute aucune migration ni configuration serveur. Un retour au commit PulSe `eed1b16` annule ses changements ; conserver les mêmes données et secrets LinKs. Les liens créés dans l'intervalle restent des liens LinKs ordinaires et ne doivent pas être supprimés s'ils ont été partagés.
+
 Au moins trois parcours complets réussis sur chaque plateforme revendiquée et un repli réussi. Vérifier navigation clavier, absence de défilement horizontal et lisibilité à 320/390/768 px. Les captures CI utilisent exclusivement des données de test et ne prouvent aucune mesure de production.
 
 Retour arrière : remettre l’ancien Compose/image PulSe et les mêmes variables. L’extension LinKs n’ajoute aucune table et ne réattribue aucun jeton existant ; les liens vidéo créés restent des liens privés LinKs ordinaires. Ne pas supprimer ces liens si des Stories les utilisent.

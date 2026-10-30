@@ -35,7 +35,7 @@ const close=s=>new Promise(r=>s.close(r));
    Object.defineProperty(navigator,'share',{value:data=>{window.__shareCalls.push({type:data.files[0].type,size:data.files[0].size,keys:Object.keys(data),active:navigator.userActivation.isActive});return window.__cancelShare?Promise.reject(new DOMException('cancelled','AbortError')):Promise.resolve()}});
    Object.defineProperty(navigator,'clipboard',{value:{writeText:value=>{window.__clipboard.push(value);return window.__rejectCopy?Promise.reject(Error('denied')):Promise.resolve()}}});
   });
-  const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
+  const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));page.on('dialog',dialog=>dialog.accept());
   await mkdir(process.env.PULSE_SCREENSHOT_DIR||resolve(__dirname,'../../screenshots'),{recursive:true});
   await page.goto(base);await page.waitForFunction(()=>document.getElementById('stat-today').textContent==='6');
   // Real Chromium manifest/installability API: do not simulate beforeinstallprompt here.

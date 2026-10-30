@@ -17,6 +17,9 @@
 .link-warning p { overflow-wrap:anywhere; margin-top:8px; }
 .link-duplicates { display:grid; gap:8px; margin:12px 0; font-size:.875rem; }
 .link-zone .search-label { margin-top:22px; }
+.campaign-details { margin:12px 0; padding:12px; background:var(--accent-soft); border-radius:10px; font-size:.8125rem; overflow-wrap:anywhere; }
+.campaign-details p + p { margin-top:6px; }
+#link-story-context button { margin-top:8px; }
 .update-notice {
   margin-bottom:18px;
   padding:12px;

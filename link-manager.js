@@ -1,7 +1,7 @@
 // Mobile client only: all affiliation, duplicate and token decisions come from LinKs.
-export function initLinkManager({onDraft,onSaved}){
+export function initLinkManager({onDraft,onSaved,onStoryLink,onStoryBack}){
  const $=id=>document.getElementById(id),form=$('link-form');
- let data={items:[],partners:[],sources:[]},current=null,shareItem=null,receipt=null,preview=null,dirty=false,busy=false,loaded=false,ticket=0,shareTicket=0,debounce;
+ let data={items:[],partners:[],sources:[]},current=null,shareItem=null,receipt=null,preview=null,dirty=false,busy=false,loaded=false,ticket=0,shareTicket=0,debounce,forStory=false;
  const status=text=>{$('links-status').textContent=text};
  const draft=()=>{onDraft();$('link-form-dot').hidden=!dirty};
  const node=(tag,text)=>{const el=document.createElement(tag);el.textContent=text;return el};
@@ -23,7 +23,14 @@ export function initLinkManager({onDraft,onSaved}){
   const rows=data.items.filter(row=>(row.name+' '+row.url+' '+row.original_url).toLocaleLowerCase('fr').includes(query));
   if(!rows.length)root.append(node('p','Aucun lien correspondant.'));
   for(const row of rows){const card=node('article','');card.className='managed-link';card.append(node('strong',row.name),node('p',row.url));const actions=node('div','');actions.className='link-actions';
-   for(const [label,handler] of [['Modifier',()=>open(row)],['Partager',()=>share(row)]]){const b=node('button',label);b.type='button';b.className='secondary';b.onclick=handler;actions.append(b)}card.append(actions);root.append(card)}
+   const choices=forStory?[['Choisir pour ma Story',()=>useInStory(row)],['Modifier',()=>open(row)]]:[['Modifier',()=>open(row)],['Partager',()=>share(row)]];
+   for(const [label,handler] of choices){const b=node('button',label);b.type='button';b.className='secondary';b.onclick=handler;actions.append(b)}card.append(actions);root.append(card)}
+ }
+ function storyMode(value){forStory=value;$('link-story-context').hidden=!value;renderList()}
+ function useInStory(row,accepted=false){
+  if(!accepted&&!mayReplace())return;
+  if(onStoryLink(row)===false)return;
+  dirty=false;clearTimeout(debounce);clearPreview();form.hidden=true;$('link-share-panel').hidden=true;draft();
  }
  async function load(){
   status('Connexion à LinKs…');$('links-retry').disabled=true;
@@ -52,6 +59,7 @@ export function initLinkManager({onDraft,onSaved}){
    // Reuse selects the existing identity; it never renames or overwrites it.
    const existing=data.items.find(item=>item.id===row.id);if(!existing){await load();}
    const found=data.items.find(item=>item.id===row.id);if(!found){status('Lien indisponible. Actualisez la liste dans LinKs.');return}
+   if(forStory){useInStory(found,true);return}
    dirty=false;form.hidden=true;draft();share(found);status('Lien existant réutilisé. Aucune destination modifiée.');
   };root.append(b)}
  }
@@ -74,7 +82,7 @@ export function initLinkManager({onDraft,onSaved}){
   event.preventDefault();if($('link-save').disabled||!receipt)return;
   clearTimeout(debounce);setBusy(true);$('link-form-status').textContent='Enregistrement dans LinKs…';
   try{const result=await post('link-save',{...receipt,confirm_destination:$('link-destination-confirm').checked});
-   current=result.item;data.items=[result.item,...data.items.filter(row=>row.id!==result.item.id)];dirty=false;form.hidden=true;clearPreview();renderList();share(result.item,true);status('Lien enregistré dans LinKs. Choisissez sa source de suivi.');onSaved();
+   current=result.item;data.items=[result.item,...data.items.filter(row=>row.id!==result.item.id)];dirty=false;form.hidden=true;clearPreview();renderList();share(result.item,true);status('Lien enregistré dans LinKs. Choisissez sa source de suivi.');onSaved();if(forStory)useInStory(result.item,true);
   }catch(error){$('link-form-status').textContent=error.message;if(error.code==='DUPLICATE'){receipt=null;$('link-save').disabled=true;duplicates(error.duplicates)}if(error.code==='REVIEW_REQUIRED')clearPreview();}
   finally{setBusy(false);if(receipt)saveState()}
  };
@@ -99,5 +107,7 @@ export function initLinkManager({onDraft,onSaved}){
  $('link-copy-manual').onclick=()=>{$('link-share-status').textContent='Copie manuelle confirmée.';$('link-copy-manual').hidden=true};
  $('link-new').onclick=()=>open();$('links-retry').onclick=()=>{if(!busy)load()};$('manage-search').oninput=renderList;
  $('link-close').onclick=()=>{if(!mayReplace())return;dirty=false;clearTimeout(debounce);clearPreview();form.hidden=true;draft()};
- return {enter:()=>{if(!loaded)load()},hasDraft:()=>dirty||busy};
+ $('link-use-story').onclick=()=>{if(shareItem)useInStory(shareItem)};
+ $('link-story-back').onclick=onStoryBack;
+ return {enter:()=>{if(!loaded)load()},beginStory:()=>storyMode(true),endStory:()=>storyMode(false),hasDraft:()=>dirty||busy};
 }

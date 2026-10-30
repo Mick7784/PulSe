@@ -7,15 +7,15 @@ export function httpURL(value) {
 export function normalizeCatalog(payload) {
   if(!payload||!Array.isArray(payload.links))throw new Error('Réponse LinKs incompatible.');
   const campaigns=[];
-  for(const raw of payload.links.slice(0,400)) {
+  for(const raw of payload.links) {
     if(!raw||typeof raw!=='object')continue;
-    const type=raw.type==='promo'?'promo':null;
+    const type=['promo','featured'].includes(raw.type)?raw.type:null;
     if(!type)continue;
     const url=httpURL(raw.url);
     if(!url)continue;
-    const item={id:clamp(raw.id,90),title:clamp(raw.title,180)||'Sans titre',description:clamp(raw.description,240),url,image:clamp(raw.image,240),promoCode:clamp(raw.promo_code,100),type,startAt:clamp(raw.start_at,35),endAt:clamp(raw.end_at,35)};
+    const item={id:clamp(raw.id,90),title:clamp(raw.title,180)||'Sans titre',description:clamp(raw.description,240),url,image:clamp(raw.effective_image??raw.image,240),promoCode:clamp(raw.promo_code,100),type,startAt:clamp(raw.start_at,35),endAt:clamp(raw.end_at,35)};
     if(!item.id)continue;
-    // Neither classic links nor featured non-promotional blocks are Story offers.
+    // LinKs supplies all eligible campaigns; visible_campaign_ids is only for its public page.
     campaigns.push(item);
   }
   return {campaigns,trackedLinks:[],trackedAvailable:false,timezone:clamp(payload.timezone,80)||'Europe/Paris',updatedAt:new Date().toISOString(),source:'links-public'};

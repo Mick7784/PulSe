@@ -12,11 +12,13 @@ const {chromium}=require('playwright');
  const secret='integration-bridge-secret-'.repeat(3),password='integration-basic-password';
  const child=spawn(python,[resolve(__dirname,'links-fixture.py'),resolve(repo),temp],{windowsHide:true,env:{...process.env,PULSE_BRIDGE_TOKEN:secret},stdio:['pipe','pipe','pipe']});
  let logs='',context,pulse;child.stderr.on('data',b=>logs+=b);const exit=new Promise(r=>child.once('exit',r));
+ const lines=createInterface({input:child.stdout});let commandId=0;
+ const control=command=>new Promise((resolve,reject)=>{const id=++commandId,timer=setTimeout(()=>{lines.off('line',listener);reject(Error('Fixture control timeout'))},10000);const listener=line=>{try{if(JSON.parse(line).control===id){clearTimeout(timer);lines.off('line',listener);resolve()}}catch{}};lines.on('line',listener);child.stdin.write(JSON.stringify({...command,request:id})+'\n')});
  try{
   const fixture=await new Promise((resolve,reject)=>{
    const timer=setTimeout(()=>reject(Error('LinKs fixture startup timeout: '+logs)),20000);
    child.once('error',reject);child.once('exit',()=>{clearTimeout(timer);reject(Error('LinKs exited: '+logs))});
-   createInterface({input:child.stdout}).on('line',line=>{try{const value=JSON.parse(line);if(value.bridge){clearTimeout(timer);resolve(value)}}catch{}});
+   lines.on('line',line=>{try{const value=JSON.parse(line);if(value.bridge){clearTimeout(timer);resolve(value)}}catch{}});
   });
   const {createPulseServer}=await import('../serve.mjs');
   pulse=createPulseServer({user:'admin',password,bridgeToken:secret,linksURL:fixture.public,bridgeURL:fixture.bridge});
@@ -91,6 +93,7 @@ const {chromium}=require('playwright');
   await newForm('Accueil sans chemin','https://HOME.example');await preview('https://HOME.example');await page.locator('#link-reviewed').check();await page.locator('#link-save').click();await page.locator('#link-share-panel').waitFor({state:'visible'});
   await page.locator('#link-source').selectOption(source('instagram'));await page.locator('#link-generate').click();await page.waitForFunction(()=>!!document.getElementById('link-short').value);
   await page.locator('.managed-link').filter({hasText:'Accueil sans chemin'}).getByRole('button',{name:'Modifier'}).click();await preview('https://HOME.example');assert.equal(await page.locator('#link-change-warning').isVisible(),false);
+  await require('./stories-integration.cjs')({page,context,api,fixture,control});
   assert.deepEqual(errors,[]);
   console.log('PASS REAL LinKs + PulSe + SQLite + Chromium: affiliation/manual/None, preview confirmation, create/edit, transaction duplicates and reuse, lost committed response, source tokens, legacy aliases/statistics, authentication, clipboard fallback, offline drafts, stale previews, mobile widths and no private cache. No physical Samsung test.');
  }finally{

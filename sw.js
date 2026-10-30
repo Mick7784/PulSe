@@ -1,7 +1,7 @@
 'use strict';
 // Bump for each application update so open clients can offer an explicit reload.
 // No private application shell is cached.
-const VERSION = 'pwa5-1';
+const VERSION = 'pwa6-1';
 const CACHE = 'pulse-public-' + VERSION;
 const PUBLIC_ASSETS = new Map([
   ['/manifest.webmanifest', 'application/manifest+json'],

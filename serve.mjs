@@ -123,7 +123,7 @@ export function createPulseServer({ user='',password='', linksURL='http://domoti
       if(req.method==='POST'&&route.pathname==='/api/story-link') {
         let body;try{body=await readJson(req)}catch{return responseJson(res,400,{error:'Demande JSON invalide ou trop volumineuse.'})}
         if(!body||!['campaign','independent','youtube'].includes(body.type)||typeof body.id!=='string'||body.id.length>100)return responseJson(res,400,{error:'Contenu PulSe invalide.'});
-        const cat=await loadCatalog();
+        const cat=await loadCatalog(true);
         if(body.type==='independent'&&(!bridgeToken||!cat.trackedAvailable))return responseJson(res,503,{error:'Liens suivis indisponibles : passerelle LinKs non connectée.'});
         const group=body.type==='campaign'?cat.campaigns:body.type==='youtube'?[cat.video].filter(Boolean):cat.trackedLinks;
         const item=group.find(x=>x.id===body.id);
@@ -136,6 +136,7 @@ export function createPulseServer({ user='',password='', linksURL='http://domoti
             if(error.status===401||error.status===403)return responseJson(res,503,{code:'BRIDGE_AUTH',error:'LinKs refuse la connexion sécurisée. Vérifiez la configuration de la liaison.'});
             if(body.type==='youtube'&&(error.unsupported||error.status===404))return responseJson(res,503,{code:'VIDEO_BRIDGE_REQUIRED',error:'La connexion LinKs doit être mise à jour pour préparer une Story YouTube.'});
             if(error.changed)return responseJson(res,409,{code:'VIDEO_CHANGED',error:'La dernière vidéo a changé. Actualisez PulSe puis sélectionnez la nouvelle vidéo.'});
+            if(error.status===400)return responseJson(res,409,{code:'SOURCE_UNAVAILABLE',error:'Cette source n’est plus disponible dans LinKs. Actualisez les contenus et choisissez une autre source ; votre média est conservé.'});
           }
           return responseJson(res,503,{error:'Impossible de créer le lien suivi LinKs. Réessaie plus tard.'});
         }

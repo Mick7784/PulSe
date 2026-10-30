@@ -19,6 +19,7 @@ module.exports=async function(){
   if(path==='/api/pulse/link-manager')return json({version:1,items:[{id:'draft',name:'Lien de recette',url:'https://example.com',original_url:'https://example.com',revision:'test'}],partners:[],sources:[{id:'discord',name:'Discord',platform:'discord'}]});
   if(path==='/api/pulse/link-token')return json({url:'https://links.example/discord12',source_id:'discord'});
   if(path==='/api/pulse/story-link')return json({url:'https://links.example/test12345'});
+  if(path==='/api/pulse/today')return json({version:1,available:true,timezone:'Europe/Paris',date:'2026-10-30',yesterday_date:'2026-10-29',generated_at:'2026-10-30T12:00:00Z',scope:'all-clicks',comparison:'yesterday-full-day',analytics_enabled:true,today:0,yesterday:0,ranking_scope:'tracked-links',tracked_total:0,top_links:[],sources:[]});
   if(path==='/api/pulse/stats')return json({period:7,total:0,today:0,last7:0,stories:0,days:Array.from({length:7},(_,i)=>({date:'2026-10-'+(20+i),clicks:0}))});
   return new Response('{}',{status:404});
  }});
@@ -49,8 +50,8 @@ module.exports=async function(){
   });
   const page=await context.newPage(),other=await context.newPage();
   let loads=0,otherLoads=0;
-  page.on('framenavigated',frame=>{if(frame===page.mainFrame())loads++});
-  other.on('framenavigated',frame=>{if(frame===other.mainFrame())otherLoads++});
+  page.on('load',()=>loads++);
+  other.on('load',()=>otherLoads++);
   await page.goto(base);await page.waitForFunction(()=>!!navigator.serviceWorker.controller);
   assert.equal(await page.locator('#update-notice').isVisible(),false,'initial install must be silent');
   const maskableSafe=await page.evaluate(async()=>{
@@ -92,7 +93,7 @@ module.exports=async function(){
   await page.locator('#update-later').click();assert.equal(await page.locator('#update-notice').isVisible(),false);
   const otherBefore=otherLoads;
   await Promise.all([
-   other.waitForEvent('framenavigated',frame=>frame===other.mainFrame()),
+   other.waitForEvent('load'),
    other.locator('#update-apply').click()
   ]);
   await other.waitForFunction(()=>!!navigator.serviceWorker.controller&&document.getElementById('stat-today')?.textContent==='0');
@@ -107,7 +108,7 @@ module.exports=async function(){
   await page.locator('#publication-check').check();await page.locator('#confirm-publication').click();
   assert.equal(await page.locator('#update-apply').isEnabled(),true);
   await Promise.all([
-   page.waitForEvent('framenavigated',frame=>frame===page.mainFrame()),
+   page.waitForEvent('load'),
    page.locator('#update-apply').click()
   ]);
   await page.waitForFunction(()=>document.getElementById('stat-today')?.textContent==='0'&&document.getElementById('editor').hidden);
@@ -131,7 +132,7 @@ module.exports=async function(){
 
   // A denied/private connection and a network drop must not clear an open Story.
   const networkDraft=await context.newPage();let networkLoads=0,storyRequests=0;
-  networkDraft.on('framenavigated',frame=>{if(frame===networkDraft.mainFrame())networkLoads++});
+  networkDraft.on('load',()=>networkLoads++);
   networkDraft.on('request',req=>{if(new URL(req.url()).pathname==='/api/story-link')storyRequests++});
   await networkDraft.goto(base);await networkDraft.waitForFunction(()=>document.getElementById('stat-today')?.textContent==='0');
   await networkDraft.route('**/api/story-link',route=>route.fulfill({status:403,contentType:'text/html',body:'Denied by private gateway'}));
@@ -179,14 +180,14 @@ module.exports=async function(){
 
   // A link form is also a private draft, protected across another tab's real activation.
   const linkDraft=await context.newPage(),clean=await context.newPage();let linkLoads=0;
-  linkDraft.on('framenavigated',frame=>{if(frame===linkDraft.mainFrame())linkLoads++});
+  linkDraft.on('load',()=>linkLoads++);
   await linkDraft.goto(base);await clean.goto(base);
   await linkDraft.locator('#nav-links').click();await linkDraft.locator('#link-new').click();
   await linkDraft.locator('#link-name').fill('Saisie à conserver pendant une mise à jour');
   const linkBefore=linkLoads;
   build=5;await update(clean);await linkDraft.waitForFunction(()=>!document.getElementById('update-notice').hidden);
   assert.equal(await linkDraft.locator('#update-apply').isDisabled(),true);
-  await Promise.all([clean.waitForEvent('framenavigated',frame=>frame===clean.mainFrame()),clean.locator('#update-apply').click()]);
+  await Promise.all([clean.waitForEvent('load'),clean.locator('#update-apply').click()]);
   await linkDraft.waitForFunction(async()=>!(await navigator.serviceWorker.getRegistration()).waiting);
   assert.equal(linkLoads,linkBefore);assert.equal(await linkDraft.locator('#link-name').inputValue(),'Saisie à conserver pendant une mise à jour');
   assert.equal(await linkDraft.locator('#update-apply').isDisabled(),true);
@@ -194,12 +195,12 @@ module.exports=async function(){
   assert.equal(await linkDraft.locator('#link-form').isVisible(),true,'cancel discard retains draft');
   linkDraft.once('dialog',dialog=>dialog.accept());await linkDraft.locator('#link-close').click();
   assert.equal(await linkDraft.locator('#update-apply').isEnabled(),true);
-  await Promise.all([linkDraft.waitForEvent('framenavigated',frame=>frame===linkDraft.mainFrame()),linkDraft.locator('#update-apply').click()]);
+  await Promise.all([linkDraft.waitForEvent('load'),linkDraft.locator('#update-apply').click()]);
   assert.equal(linkLoads,linkBefore+1);
   await linkDraft.locator('#nav-links').click();await linkDraft.locator('.managed-link').getByRole('button',{name:'Partager',exact:true}).click();await linkDraft.locator('#link-source').selectOption('discord');await linkDraft.locator('#link-generate').click();await linkDraft.waitForFunction(()=>!!document.getElementById('link-short').value);
   await linkDraft.locator('#publication-text').fill('Texte privé à conserver');const publicationLoads=linkLoads;
   build=6;await update(clean);await linkDraft.waitForFunction(()=>!document.getElementById('update-notice').hidden);assert.equal(await linkDraft.locator('#update-apply').isDisabled(),true);
-  await Promise.all([clean.waitForEvent('framenavigated',frame=>frame===clean.mainFrame()),clean.locator('#update-apply').click()]);
+  await Promise.all([clean.waitForEvent('load'),clean.locator('#update-apply').click()]);
   await linkDraft.waitForFunction(async()=>!(await navigator.serviceWorker.getRegistration()).waiting);
   assert.equal(linkLoads,publicationLoads);assert.equal(await linkDraft.locator('#publication-text').inputValue(),'Texte privé à conserver');assert.equal(await linkDraft.locator('#update-apply').isDisabled(),true);
   await linkDraft.locator('#publication-copy').click();await linkDraft.locator('#publication-confirm-check').check();await linkDraft.locator('#publication-confirm').click();assert.equal(await linkDraft.locator('#update-apply').isEnabled(),true);

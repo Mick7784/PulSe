@@ -9,7 +9,7 @@ permissions:
   contents: read
 concurrency:
   group: pulse-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -26,7 +26,10 @@ jobs:
         run: |
           set -euo pipefail
           docker compose --env-file .env.example config --quiet
-          test "$(docker compose --env-file .env.example config --images)" = "ghcr.io/mick7784/links-pulse:1.1.3"
+          test "$(docker compose --env-file .env.example config --images)" = "ghcr.io/mick7784/links-pulse:1.1.4"
+          PULSE_VERSION=latest docker compose --env-file .env.example config --images | grep -Fx "ghcr.io/mick7784/links-pulse:latest"
+      - name: Release immutability and latest regression guards
+        run: python3 tests/release-guard.py
       - name: Unit and server tests
         run: node --test tests/*.test.mjs
       - name: Install test browser
@@ -38,23 +41,23 @@ jobs:
           NODE_PATH: ${{ runner.temp }}/pulse-browser/node_modules
           PULSE_SCREENSHOT_DIR: ${{ runner.temp }}/pulse-screenshots
         run: node tests/browser.cjs
-      - name: Check out the reviewed LinKs engine
+      - name: Read the immutable LinKs release lock
+        id: links
+        run: node -e "const fs=require('fs'),r=require('./tests/links-release.json');if(!/^[a-f0-9]{40}$/.test(r.revision))process.exit(1);fs.appendFileSync(process.env.GITHUB_OUTPUT,'revision='+r.revision+'\n')"
+      - name: Check out only the released LinKs fixture helper
         uses: actions/checkout@v4
         with:
           repository: Mick7784/LinKs
-          ref: 056179d4720af70df4298c2858149ae1cfb31198
+          ref: ${{ steps.links.outputs.revision }}
           path: links-engine
           persist-credentials: false
-      - name: Real LinKs and PulSe mobile integration
+      - name: Real released LinKs image, PulSe, SQLite and mobile integration
         env:
           NODE_PATH: ${{ runner.temp }}/pulse-browser/node_modules
           LINKS_REPO: ${{ github.workspace }}/links-engine
-          PYTHON_PATH: ${{ runner.temp }}/links-python/bin/python
+          LINKS_CONTAINER: '1'
           PULSE_SCREENSHOT_DIR: ${{ runner.temp }}/pulse-screenshots
-        run: |
-          python3 -m venv "$RUNNER_TEMP/links-python"
-          "$PYTHON_PATH" -m pip install Pillow
-          node tests/links-integration.cjs
+        run: node tests/links-integration.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -89,48 +92,17 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v4
-      - name: Resolve release version
-        id: release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          version="$(node -p "require('./package.json').version")"
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          if gh release view "v$version" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "publish=false" >> "$GITHUB_OUTPUT"
-            echo "Version v$version is already released; leaving immutable image/tag unchanged."
-          else
-            echo "publish=true" >> "$GITHUB_OUTPUT"
-          fi
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
       - uses: docker/setup-qemu-action@v3
-        if: steps.release.outputs.publish == 'true'
       - uses: docker/setup-buildx-action@v3
-        if: steps.release.outputs.publish == 'true'
       - uses: docker/login-action@v3
-        if: steps.release.outputs.publish == 'true'
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Publish versioned multi-architecture Docker image
-        if: steps.release.outputs.publish == 'true'
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ghcr.io/mick7784/links-pulse:${{ steps.release.outputs.version }}
-          labels: |
-            org.opencontainers.image.source=https://github.com/Mick7784/PulSe
-            org.opencontainers.image.version=${{ steps.release.outputs.version }}
-      - name: Create GitHub release and version tag
-        if: steps.release.outputs.publish == 'true'
+      - name: Publish immutable version, verify architectures, then promote latest
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release create "v${{ steps.release.outputs.version }}" \
-            --repo "$GITHUB_REPOSITORY" \
-            --target "$GITHUB_SHA" \
-            --title "PulSe V${{ steps.release.outputs.version }}" \
-            --notes-file docs/RELEASE_NOTES.md
+        run: bash scripts/publish-release.sh

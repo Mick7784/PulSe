@@ -10,7 +10,8 @@ const {chromium}=require('playwright');
  const repo=process.env.LINKS_REPO;if(!repo)throw Error('LINKS_REPO must point to the real LinKs checkout. No mocked fallback.');
  const python=process.env.PYTHON_PATH||'python3',temp=await mkdtemp(join(tmpdir(),'pulse-links-'));
  const secret='integration-bridge-secret-'.repeat(3),password='integration-basic-password';
- const child=spawn(python,[resolve(__dirname,'links-fixture.py'),resolve(repo),temp],{windowsHide:true,env:{...process.env,PULSE_BRIDGE_TOKEN:secret},stdio:['pipe','pipe','pipe']});
+ const container=process.env.LINKS_CONTAINER==='1'?require('./links-container.cjs')(repo,secret):null;
+ const child=container?.child||spawn(python,[resolve(__dirname,'links-fixture.py'),resolve(repo),temp],{windowsHide:true,env:{...process.env,PULSE_BRIDGE_TOKEN:secret},stdio:['pipe','pipe','pipe']});
  let logs='',context,pulse;child.stderr.on('data',b=>logs+=b);const exit=new Promise(r=>child.once('exit',r));
  const lines=createInterface({input:child.stdout});let commandId=0;
  const control=command=>new Promise((resolve,reject)=>{const id=++commandId,timer=setTimeout(()=>{lines.off('line',listener);reject(Error('Fixture control timeout'))},10000);const listener=line=>{try{if(JSON.parse(line).control===id){clearTimeout(timer);lines.off('line',listener);resolve()}}catch{}};lines.on('line',listener);child.stdin.write(JSON.stringify({...command,request:id})+'\n')});
@@ -20,6 +21,12 @@ const {chromium}=require('playwright');
    child.once('error',reject);child.once('exit',()=>{clearTimeout(timer);reject(Error('LinKs exited: '+logs))});
    lines.on('line',line=>{try{const value=JSON.parse(line);if(value.bridge){clearTimeout(timer);resolve(value)}}catch{}});
   });
+  if(container){
+   assert.equal(fixture.engine,'/app/analytics.py','Integration must execute the packaged engine');
+   assert.equal(fixture.version,container.release.version);
+   assert.equal(fixture.releaseId,container.release.version+':'+container.release.revision);
+   console.log('Running packaged LinKs engine:',fixture.engine,fixture.releaseId);
+  }
   const {createPulseServer}=await import('../serve.mjs');
   pulse=createPulseServer({user:'admin',password,bridgeToken:secret,linksURL:fixture.public,bridgeURL:fixture.bridge});
   await new Promise(r=>pulse.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+pulse.address().port;
@@ -99,7 +106,9 @@ const {chromium}=require('playwright');
   console.log('PASS REAL LinKs + PulSe + SQLite + Chromium: affiliation/manual/None, preview confirmation, create/edit, transaction duplicates and reuse, lost committed response, source tokens, legacy aliases/statistics, authentication, clipboard fallback, offline drafts, stale previews, mobile widths and no private cache. No physical Samsung test.');
  }finally{
   await context?.close();if(pulse)await new Promise(r=>pulse.close(r));
-  child.stdin.end('\n');await Promise.race([exit,new Promise(r=>setTimeout(()=>{child.kill();r()},5000))]);
+  child.stdin.end('\n');let timer;
+  await Promise.race([exit,new Promise(r=>{timer=setTimeout(()=>{child.kill();r()},5000)})]);
+  clearTimeout(timer);container?.cleanup();
   await rm(temp,{recursive:true,force:true});
  }
 })().catch(error=>{console.error(error);process.exitCode=1});

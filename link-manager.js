@@ -24,9 +24,10 @@ export function initLinkManager({onDraft,onSaved,onStoryLink,onStoryBack}){
   const query=$('manage-search').value.trim().toLocaleLowerCase('fr'),root=$('managed-links');root.replaceChildren();
   const rows=data.items.filter(row=>(row.name+' '+row.url+' '+row.original_url).toLocaleLowerCase('fr').includes(query));
   if(!rows.length)root.append(node('p','Aucun lien correspondant.'));
-  for(const row of rows){const card=node('article','');card.className='managed-link';card.append(node('strong',row.name),node('p',row.url));const actions=node('div','');actions.className='link-actions';
+  for(const row of rows){const card=node('article','');card.className='managed-link';const name=node('strong',row.name);name.title=row.name;name.id='managed-name-'+row.id;card.append(name);const actions=node('div','');actions.className='link-actions';
    const choices=forStory?[['Choisir pour ma Story',()=>useInStory(row)],['Modifier',()=>open(row)]]:[['Modifier',()=>open(row)],['Partager',()=>share(row)]];
-   for(const [label,handler] of choices){const b=node('button',label);b.type='button';b.className='secondary';b.onclick=handler;actions.append(b)}card.append(actions);root.append(card)}
+   for(const [label,handler] of choices){const b=node('button','');b.type='button';b.className='secondary quick-action';b.setAttribute('aria-label',label);b.setAttribute('aria-describedby',name.id);b.title=label+' · '+row.name;
+    const icon=document.createElementNS('http://www.w3.org/2000/svg','svg');icon.setAttribute('viewBox','0 0 24 24');icon.setAttribute('aria-hidden','true');const path=document.createElementNS(icon.namespaceURI,'path');path.setAttribute('d',label==='Modifier'?'M4 16v4h4L20 8l-4-4L4 16M13 7l4 4':label==='Partager'?'M12 16V3m-5 5 5-5 5 5M5 13v7h14v-7':'m5 12 4 4L19 6');icon.append(path);b.append(icon);b.onclick=handler;actions.append(b)}card.append(actions);root.append(card)}
  }
  function storyMode(value){forStory=value;$('link-story-context').hidden=!value;renderList()}
  function useInStory(row,accepted=false){

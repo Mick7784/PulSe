@@ -1,35 +1,16 @@
-# PulSe V1.1.3 — Refonte mobile et liens LinKs
+# PulSe V1.1.4 — mobile compact, statistiques du jour
 
-Publication du chantier PulSe validé sur la PR #4, compatible avec le moteur LinKs intégré dans la PR #55.
+- Navigation Stories → Liens → Stats ; header et navigation basse fixes, zones tactiles 44 px.
+- Une ligne par lien avec modification/partage accessibles, choix Story conservé, recherche nom/URL.
+- Clics aujourd'hui (tous les clics LinKs), comparaison explicitement « hier, journée complète ». Classements journaliers des liens suivis, détail à la demande. Pas de données horaires inventées.
+- LinKs V1.329 requis ; bridge privé en lecture seule, aucune migration ou base PulSe.
+- Images AMD64/ARM64 `ghcr.io/mick7784/links-pulse:1.1.4` et `:latest`, même digest vérifié. Tags numérotés non réécrits, anciennes exécutions refusées.
+- PULSE_VERSION accepte 1.1.4 (défaut épinglé) ou latest (pull/recreate explicite).
 
-## Nouveautés
+Validation : suites Node, navigateur mobile/PWA, intégration réelle PulSe–LinKs–SQLite, tests Docker et frontière privée en CI. Captures 320/360/390/412/480 px. Pas de recette physique Samsung ; clavier et affichage standalone simulés.
 
-- Interface mobile repensée, avec logo officiel, navigation compacte et identité visuelle harmonisée avec LinKs.
-- Gestion des liens suivis depuis le smartphone : création, modification, aperçu d'affiliation, partenaires automatiques/manuels, doublons et réutilisation, via le moteur unique LinKs.
-- Préparation de Stories avec promotions éligibles, liens suivis ou dernière vidéo YouTube ; médias locaux et génération d'un visuel 1080 × 1920.
-- Parcours YouTube et Discord : préparation de texte, copie et partage natif, suivi par source et confirmation manuelle de publication.
-- Statistiques mobiles 7/30 jours, avec détail des liens et sources suivi par LinKs.
-- PWA Android : icônes officielles, manifest, mises à jour explicites, protections des préparations en cours et cache limité aux seuls éléments publics.
-- Correctifs d'ergonomie, d'affichage mobile et du repère des publications en préparation.
+L'intégration exécute l'image publiée LinKs V1.329, épinglée par digest dans `tests/links-release.json` (commit `8fbc2a5a2f1eee58f070c8f4cdc4a6a82819b560`). Les labels de version/révision, le digest téléchargé et le moteur `/app/analytics.py` exécuté sont vérifiés. Seuls les deux scripts de préparation des données de test sont montés ; aucun code applicatif de l'image n'est remplacé. SQLite et médias sont jetables, sans accès aux données de production.
 
-## Sécurité et compatibilité
+HTTP Basic et secrets conservés. Aucun changement du VPS, Dockhand, Pangolin ou Traefik.
 
-- **LinKs V1.328 requis**, intégrant la passerelle privée PulSe et les nouvelles fonctionnalités de liens.
-- Le secret de la passerelle LinKs reste exclusivement serveur-à-serveur. Aucune catégorie de lien ni base de données PulSe supplémentaire.
-- **HTTP Basic est conservé.** L'activation du futur accès privé Pangolin/VPN reste un chantier séparé, à valider sur le VPS et le Samsung.
-- Les médias et brouillons restent en mémoire ; une fermeture du processus Android peut les perdre.
-- La publication de cette release **ne redéploie pas** l'application sur le VPS.
-
-## Validation
-
-- CI PulSe : 16 tests Node, navigation mobile/PWA et intégrations réelles HTTP PulSe–LinKs–SQLite.
-- CI LinKs intégrée : suites Python, JS et navigateur ainsi que Docker AMD64/ARM64.
-- Préservation vérifiée sur jeux de données de test : liens courts, partenaires, sources, tokens, compteurs et historiques.
-
-## Images et déploiement
-
-Image Docker : `ghcr.io/mick7784/links-pulse:1.1.3` (AMD64/ARM64).
-
-Le déploiement sera organisé séparément avec la configuration réelle Dockhand/Pangolin après sauvegarde des paramètres existants. Conserver HTTP Basic et les secrets actuels.
-
-**Retour arrière :** revenir à l'image `ghcr.io/mick7784/links-pulse:1.1.2` sans supprimer les volumes LinKs, jetons, liens courts ni statistiques.
+Retour arrière : lors d'un déploiement séparément autorisé, sélectionner `PULSE_VERSION=1.1.3` et pull/recreate PulSe, sans toucher aux volumes LinKs. LinKs V1.329 reste compatible avec PulSe v1.1.3.

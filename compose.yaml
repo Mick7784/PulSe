@@ -1,7 +1,7 @@
 name: links-pulse-test
 services:
   pulse:
-    image: ghcr.io/mick7784/links-pulse:${PULSE_VERSION:-1.1.3}
+    image: ghcr.io/mick7784/links-pulse:${PULSE_VERSION:-1.1.4}
     pull_policy: always
     restart: unless-stopped
     init: true

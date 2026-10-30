@@ -1000,3 +1000,36 @@ footer {
     scroll-behavior:auto!important
   }
 }
+
+/* One document scroller; fixed chrome leaves room for safe areas and keyboard. */
+:root { --header-height:calc(72px + env(safe-area-inset-top)); --nav-height:calc(66px + env(safe-area-inset-bottom)); }
+html { scroll-padding-top:calc(var(--header-height) + 12px); scroll-padding-bottom:calc(var(--nav-height) + 12px); }
+.shell { padding-top:calc(var(--header-height) + 12px); padding-bottom:calc(var(--nav-height) + 16px); }
+.topbar { position:fixed; top:0; left:50%; transform:translateX(-50%); width:min(100%,480px); height:auto; min-height:var(--header-height); padding:env(safe-area-inset-top) max(12px,env(safe-area-inset-right)) 0 max(12px,env(safe-area-inset-left)); margin:0; background:var(--bg); z-index:10; }
+.brand { width:156px; }
+.view-heading { margin-bottom:8px; }
+.view-heading h2 { font-size:1.25rem; }
+.link-zone,.story-zone,.dashboard { margin-top:0; }
+.link-zone .search-label { margin-top:12px; }
+.managed-link { display:flex; align-items:center; gap:8px; min-height:56px; padding:4px 6px 4px 12px; border-radius:10px; }
+.managed-link strong { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:.9rem; }
+.managed-link .link-actions { flex:none; flex-wrap:nowrap; gap:4px; margin:0; }
+.managed-link .quick-action { width:44px; height:44px; min-height:44px; padding:10px; }
+.quick-action svg { width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.today-kpi { padding:16px; border:1px solid var(--line); border-radius:14px; background:linear-gradient(120deg,var(--accent-soft),var(--surface)); }
+.today-kpi strong { display:block; font-size:3.5rem; line-height:1.2; color:var(--accent); }
+.today-kpi p { font-size:.8rem; color:var(--muted); margin:6px 0 0; }
+.today-chart { margin:16px 0 8px; }
+.today-bar + .today-bar { margin-top:12px; }
+.today-bar-label { display:flex; justify-content:space-between; gap:8px; font-size:.85rem; }
+.today-track { height:9px; background:var(--raised); border-radius:5px; margin-top:5px; overflow:hidden; }
+.today-fill { height:100%; background:var(--accent); border-radius:5px; }
+.today-bar + .today-bar .today-fill { background:var(--violet); }
+.today-ranking { margin-top:20px; }
+.today-ranking h3 { font-size:1rem; }
+.today-ranking p { font-size:.85rem; overflow-wrap:anywhere; }
+.today-ranking summary { min-height:44px; padding-block:10px; cursor:pointer; color:var(--accent); }
+#insights-links .selection-copy { overflow-wrap:anywhere; }
+.selection-list { grid-template-columns:minmax(0,1fr); } .managed-link { min-width:0; }
+
+.topbar h1 { min-width:0; flex:1; }

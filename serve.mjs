@@ -5,6 +5,7 @@ import { readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { httpURL, normalizeCatalog, normalizeTrackedLinks, normalizeStats, normalizeVideo, safeImageRef } from './catalog.mjs';
 import {managerRequest,managerResponse,matches} from './link-api.mjs';
+import {normalizeToday} from './today.mjs';
 import {normalizeInsights} from './insights.mjs';
 
 const ROOT = new URL('./', import.meta.url);
@@ -81,7 +82,7 @@ export function createPulseServer({ user='',password='', linksURL='http://domoti
   }
   const handler=async (req,res)=>{
     let route;try{route=new URL(req.url,'http://localhost')}catch{return responseJson(res,400,{error:'Adresse invalide.'})}
-    if(req.method==='GET'&&route.pathname==='/healthz')return responseJson(res,200,{status:'ok',version:'1.1.3'});
+    if(req.method==='GET'&&route.pathname==='/healthz')return responseJson(res,200,{status:'ok',version:'1.1.4'});
     if(user && !(req.method==='GET'&&PUBLIC_PWA.has(route.pathname)) && !sameSecret(req.headers.authorization,authValue)) {
       res.writeHead(401,{...HEADERS,'WWW-Authenticate':'Basic realm="PulSe", charset="UTF-8"'});return res.end('Connexion requise.');
     }
@@ -112,6 +113,12 @@ export function createPulseServer({ user='',password='', linksURL='http://domoti
       if(req.method==='GET'&&route.pathname==='/api/catalog') {
         try{return responseJson(res,200,await loadCatalog(route.searchParams.get('refresh')==='1'))}
         catch{return responseJson(res,503,{error:'LinKs momentanément inaccessible : vérifie LINKS_PUBLIC_URL.'})}
+      }
+      if(req.method==='GET'&&route.pathname==='/api/today') {
+        if(route.search)return responseJson(res,400,{error:'Aucun paramètre attendu.'});
+        if(!bridgeToken)return responseJson(res,200,{available:false,reason:'Connexion sécurisée LinKs nécessaire.'});
+        try{return responseJson(res,200,normalizeToday(await requestLinks('/api/pulse/today',{privateAccess:true})))}
+        catch{return responseJson(res,200,{available:false,reason:'La passerelle du jour LinKs ne répond pas. LinKs V1.329 ou supérieur est requis.'})}
       }
       if(req.method==='GET'&&route.pathname==='/api/stats') {
         const requested=route.searchParams.getAll('days');
@@ -185,7 +192,7 @@ export async function startFromEnvironment(env=process.env) {
   const server=createPulseServer({user:env.PULSE_TEST_USER||'',password:env.PULSE_TEST_PASSWORD||'',linksURL:env.LINKS_PUBLIC_URL||'http://domotik-links:8080',bridgeToken:env.PULSE_BRIDGE_TOKEN||'',bridgeURL:env.LINKS_BRIDGE_URL||''});
   const host=env.PULSE_HOST||'127.0.0.1',port=Number(env.PULSE_PORT||4173);
   await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(port,host,resolve)});
-  console.log(`PulSe V1.1.3 : HTTP sur ${host}:${port}`);
+  console.log(`PulSe V1.1.4 : HTTP sur ${host}:${port}`);
   return server;
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href)startFromEnvironment().catch(e=>{console.error('Démarrage refusé :',e.message);process.exitCode=1});

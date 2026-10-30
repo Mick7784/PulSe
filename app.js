@@ -6,7 +6,15 @@ const editor=$('editor');
 let pwaUpdates;
 const message=text=>{$('story-status').textContent=text||''};
 function node(tag,cls,text){const el=document.createElement(tag);if(cls)el.className=cls;if(text!=null)el.textContent=text;return el}
-async function api(path,options={}){const r=await fetch(path,{cache:'no-store',...options});const data=await r.json();if(!r.ok)throw Error(data.error||'Connexion indisponible.');return data}
+async function api(path,options={}){
+ const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),12000);
+ try{
+  let r;try{r=await fetch(path,{cache:'no-store',...options,signal:controller.signal})}catch{throw Error('Connexion indisponible. Reconnectez Pangolin puis réessayez. Votre préparation reste dans cette page.')}
+  if(r.status===401||r.status===403)throw Error('Accès refusé. Vérifiez votre connexion privée et vos identifiants, puis réessayez.');
+  let data;try{data=await r.json()}catch{throw Error('Réponse indisponible. Vérifiez votre connexion privée puis réessayez.')}
+  if(!r.ok)throw Error(data.error||'Connexion indisponible.');return data;
+ }finally{clearTimeout(timeout)}
+}
 function canShareFile(file){try{return isSecureContext&&!!navigator.share&&!!navigator.canShare?.({files:[file]})}catch{return false}}
 function clearPrepared(){prepared=null;mediaFile=null;if(objectURL)URL.revokeObjectURL(objectURL);objectURL=null;flow={copied:false,shared:false,downloaded:false,published:false};$('preview').hidden=true;$('video-preview').hidden=true;$('video-preview').pause();$('video-preview').removeAttribute('src');$('story-link').value='';$('media-name').textContent='';$('manual-copy').hidden=true;$('retry-link').hidden=true;$('publication-check').checked=false;$('publication-receipt').textContent='';syncDraft()}
 function syncDraft(){const url=selected?.link||'';prepared=mediaFile&&url?{file:mediaFile,url}:null;$('story-link').value=url;$('copy').disabled=!url;$('share').disabled=!prepared||!flow.copied||!canShareFile(mediaFile);$('download').hidden=!mediaFile;

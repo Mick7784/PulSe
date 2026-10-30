@@ -1,0 +1,44 @@
+# CANDIDAT AUTONOME, pas un override. Ne pas déployer en phase 4.
+# Remplace le Compose PulSe seulement après inventaire et recette réseau.
+name: links-pulse-test
+services:
+  pulse:
+    image: ${PULSE_PRIVATE_IMAGE:?Image PulSe validée et publiée requise}
+    pull_policy: always
+    restart: unless-stopped
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 64
+    mem_limit: 192m
+    cpus: 0.5
+    environment:
+      PULSE_HOST: 0.0.0.0
+      PULSE_PORT: 4173
+      PULSE_REQUIRE_AUTH: "1"
+      PULSE_TEST_USER: ${PULSE_TEST_USER:?Identifiant Basic requis}
+      PULSE_TEST_PASSWORD: ${PULSE_TEST_PASSWORD:?Mot de passe Basic requis}
+      PULSE_BRIDGE_TOKEN: ${PULSE_BRIDGE_TOKEN:?Secret bridge existant requis}
+      LINKS_PUBLIC_URL: ${LINKS_PUBLIC_URL:?Origine interne LinKs vérifiée requise}
+      LINKS_BRIDGE_URL: ${LINKS_BRIDGE_URL:?Origine interne du bridge vérifiée requise}
+    # Aucun port publié sur l'hôte, même en boucle locale.
+    labels:
+      traefik.enable: "false"
+    healthcheck:
+      test: ["CMD", "node", "healthcheck.mjs"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    networks:
+      private_ingress:
+        aliases: [pulse-private]
+      links_bridge: {}
+networks:
+  private_ingress:
+    external: true
+    name: ${PULSE_PRIVATE_NETWORK:?Réseau du connecteur privé vérifié requis}
+  links_bridge:
+    external: true
+    name: ${LINKS_BRIDGE_NETWORK:?Réseau existant de LinKs vérifié requis}

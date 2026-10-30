@@ -43,7 +43,7 @@ module.exports=async function(){
    window.addEventListener('beforeinstallprompt',e=>e.preventDefault());
    Object.defineProperty(navigator,'clipboard',{value:{writeText:()=>Promise.resolve()}});
    Object.defineProperty(navigator,'canShare',{value:()=>true});
-   Object.defineProperty(navigator,'share',{value:()=>Promise.resolve()});
+   Object.defineProperty(navigator,'share',{value:data=>{window.__lastSharedFiles=data.files;return Promise.resolve()}});
   });
   const page=await context.newPage(),other=await context.newPage();
   let loads=0,otherLoads=0;
@@ -127,6 +127,54 @@ module.exports=async function(){
   assert.equal(await other.locator('#video-preview').getAttribute('src'),video);
   assert.equal(await other.locator('#update-apply').isDisabled(),true);
 
+  // A denied/private connection and a network drop must not clear an open Story.
+  const networkDraft=await context.newPage();let networkLoads=0,storyRequests=0;
+  networkDraft.on('framenavigated',frame=>{if(frame===networkDraft.mainFrame())networkLoads++});
+  networkDraft.on('request',req=>{if(new URL(req.url()).pathname==='/api/story-link')storyRequests++});
+  await networkDraft.goto(base);await networkDraft.waitForFunction(()=>document.getElementById('stat-today')?.textContent==='0');
+  await networkDraft.route('**/api/story-link',route=>route.fulfill({status:403,contentType:'text/html',body:'Denied by private gateway'}));
+  await networkDraft.locator('#nav-stories').click();await networkDraft.locator('#tracked-links button').click();
+  await networkDraft.waitForFunction(()=>document.getElementById('story-status').textContent.includes('Accès refusé'));
+  assert.match(await networkDraft.locator('#story-status').textContent(),/Accès refusé/);
+  await networkDraft.locator('#story-media').setInputFiles({name:'network-photo.png',mimeType:'image/png',buffer:image});
+  await networkDraft.waitForFunction(()=>!document.getElementById('preview').hidden&&!document.getElementById('retry-link').hidden);
+  const networkPhoto=await networkDraft.locator('#preview').getAttribute('src'),networkBefore=networkLoads;
+  await networkDraft.unroute('**/api/story-link');
+  let stalled;
+  await networkDraft.route('**/api/story-link',route=>{stalled=route});
+  await networkDraft.locator('#retry-link').click();
+  await networkDraft.waitForFunction(()=>document.getElementById('story-status').textContent.includes('Reconnectez Pangolin'),{},{timeout:16000});
+  assert.equal(await networkDraft.locator('#preview').getAttribute('src'),networkPhoto,'a stalled tunnel times out without losing media');
+  if(stalled)await stalled.abort().catch(()=>{});
+  await networkDraft.unroute('**/api/story-link');
+  await context.setOffline(true);
+  await networkDraft.locator('#retry-link').click();
+  await networkDraft.waitForFunction(()=>document.getElementById('story-status').textContent.includes('Reconnectez Pangolin'));
+  await networkDraft.locator('#refresh').click();
+  await networkDraft.waitForFunction(()=>document.getElementById('connection-status').textContent.includes('inaccessible'));
+  assert.equal(await networkDraft.locator('#preview').getAttribute('src'),networkPhoto);
+  assert.equal(await networkDraft.locator('#editor').isVisible(),true);
+  assert.equal(await other.locator('#video-preview').getAttribute('src'),video);
+  assert.equal(otherLoads,videoLoads);assert.equal(networkLoads,networkBefore);
+  assert.equal(await networkDraft.locator('#preview').evaluate(img=>img.complete&&img.naturalWidth===1080),true);
+  const requestsBeforeReconnect=storyRequests;
+  await context.setOffline(false);
+  // Reconnection may check a worker, but must not automatically repeat a POST.
+  await networkDraft.waitForFunction(()=>navigator.onLine);
+  assert.equal(storyRequests,requestsBeforeReconnect);
+  await networkDraft.locator('#retry-link').click();
+  await networkDraft.waitForFunction(()=>!!document.getElementById('story-link').value);
+  assert.equal(await networkDraft.locator('#preview').getAttribute('src'),networkPhoto);
+  await networkDraft.locator('#copy').click();await networkDraft.locator('#share').click();
+  assert.equal(await networkDraft.evaluate(async()=>window.__lastSharedFiles[0].type==='image/jpeg'&&(await window.__lastSharedFiles[0].arrayBuffer()).byteLength>0),true);
+  await other.locator('#copy').click();await other.locator('#share').click();
+  assert.equal(await other.evaluate(async()=>new TextDecoder().decode(await window.__lastSharedFiles[0].arrayBuffer())),'video-sharing-contract');
+  await networkDraft.locator('#refresh').click();
+  await networkDraft.waitForFunction(()=>document.getElementById('connection-status').textContent==='Synchronisé avec LinKs');
+  assert.equal(await networkDraft.locator('#preview').getAttribute('src'),networkPhoto);
+  assert.equal(networkLoads,networkBefore);assert.equal(otherLoads,videoLoads);
+  await networkDraft.close();
+
   // Real offline navigation and exclusion of all private or query-bearing requests.
   const offline=await context.newPage();await offline.goto(base);await offline.waitForFunction(()=>document.getElementById('stat-today')?.textContent==='0');
   await offline.evaluate(async()=>{await Promise.all(['/api/catalog','/api/stats','/api/visual?id=test','/app.js','/style.css','/brand-pulse.png','/manifest.webmanifest?private=1'].map(url=>fetch(url).catch(()=>{})))});
@@ -146,6 +194,6 @@ module.exports=async function(){
    const result=[];for(const path of ['/api/stats','/app.js','/icon-192.png?private=1']){try{await fetch(path);result.push(false)}catch{result.push(true)}}return result;
   });assert.deepEqual(unavailable,[true,true,true]);
   await context.setOffline(false);
-  console.log('PASS PWA: maskable safe circle, waiting update, failed installation rollback, explicit reload, image/video drafts across tabs and activation race, cache cleanup, private cache exclusion, styled offline fallback. No physical Samsung validation.');
+  console.log('PASS PWA: maskable safe circle, waiting update, failed installation rollback, explicit reload, image/video drafts across tabs and activation race, denied access and offline/reconnection draft preservation, cache cleanup, private cache exclusion, styled offline fallback. No physical Samsung validation.');
  }finally{if(context)await context.close();await new Promise(r=>server.close(r))}
 };

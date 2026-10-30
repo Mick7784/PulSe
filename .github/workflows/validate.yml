@@ -59,6 +59,9 @@ jobs:
           curl -fsS -u test:local-validation-password http://127.0.0.1:14173/pwa.mjs -o /dev/null
           curl -fsS -u test:local-validation-password http://127.0.0.1:14173/api/stats | node -e "let s='';process.stdin.on('data',b=>s+=b);process.stdin.on('end',()=>{if(JSON.parse(s).available!==false)process.exit(1)})"
 
+      - name: Private boundary through real Traefik and internal bridge
+        run: node tests/edge-integration.mjs
+
   publish:
     needs: validate
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'

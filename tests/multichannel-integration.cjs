@@ -8,6 +8,8 @@ module.exports=async function({page,context,api,fixture}){
  await page.locator('#nav-links').click();await page.locator('.managed-link').filter({hasText:'Lien historique'}).getByRole('button',{name:'Partager',exact:true}).click();
  const generate=async platform=>{await page.locator('#link-source').selectOption(source(platform));await page.locator('#link-generate').click();await page.waitForFunction(()=>!!document.getElementById('link-short').value);return page.locator('#link-short').inputValue()};
  const youtube=await generate('youtube');await page.locator('#publication-text').fill('Découvrez mon installation !');
+ assert.equal(await page.locator('#link-form-dot').isVisible(),true,'text draft is indicated in the navigation');
+ await page.locator('#nav-stats').click();assert.equal(await page.locator('#link-form-dot').isVisible(),true);await page.locator('#nav-links').click();
  assert.equal(await page.locator('#publication-output').inputValue(),'Découvrez mon installation !\n\n'+youtube);
  assert.match(await page.locator('#publication-hint').textContent(),/Shorts/);assert.equal(await page.locator('#publication-open').getAttribute('href'),'https://www.youtube.com/');
  await page.evaluate(()=>window.denyClipboard=true);await page.locator('#publication-copy').click();await page.locator('#publication-manual').waitFor({state:'visible'});await page.locator('#publication-manual').click();
@@ -21,6 +23,7 @@ module.exports=async function({page,context,api,fixture}){
  await page.evaluate(()=>window.cancelTextShare=false);await page.locator('#publication-share').click();await page.waitForFunction(()=>!document.getElementById('publication-confirm-check').disabled);
  assert.equal(await page.evaluate(()=>textShares.at(-1).active),true);assert.deepEqual(await page.evaluate(()=>Object.keys(textShares.at(-1).data)),['text']);assert.equal(await page.evaluate(()=>textShares.at(-1).data.text),'Texte révisé\n\n'+discord);
  await page.locator('#publication-confirm-check').check();await page.locator('#publication-confirm').click();assert.match(await page.locator('#text-publication-receipt').textContent(),/déclarée par vous/);
+ assert.equal(await page.locator('#link-form-dot').isVisible(),false,'completed preparation clears its indicator');
  await page.locator('#publication-text').fill('x'.repeat(2000));assert.equal(await page.locator('#publication-copy').isDisabled(),true);assert.equal(await page.locator('#publication-share').isDisabled(),true);
  await page.locator('#publication-text').fill('Message conservé hors connexion');
  accept=false;await page.locator('#link-new').click();accept=true;assert.equal(await page.locator('#link-share-panel').isVisible(),true);

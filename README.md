@@ -1,11 +1,13 @@
-# PulSe V1.1.2
+# PulSe — refonte mobile en validation
 
-Application mobile de préparation de Stories et de consultation des clics LinKs. Docker indépendant ; aucune commande de déploiement automatique. Base V1 récupérée intégralement depuis le Compose Dockhand fourni par le propriétaire, puis versionnée sur une branche distincte.
+Application mobile de gestion des liens suivis, de préparation de publications et de consultation des clics LinKs. Docker indépendant ; aucune commande de déploiement automatique. Base V1 récupérée intégralement depuis le Compose Dockhand fourni par le propriétaire, puis versionnée sur une branche distincte.
+
+**Branche de développement non publiée.** La version technique reste `1.1.2` jusqu’à une autorisation de release distincte ; l’image publiée de ce nom ne contient pas cette refonte. Voir [le bilan de validation finale et les prérequis de livraison](docs/VALIDATION-FINALE.md). Aucun déploiement VPS ni retrait de Basic n’est autorisé par ce bilan.
 
 ## Interface
 
 - En-tête : logo officiel PulSe, recadré à partir du fichier fourni sans modification des formes ou proportions. Les icônes PWA 192/512 utilisent l’image originale complète, sans découpe ni déformation ; les variantes `maskable` gardent toute l’image dans le cercle de sécurité central.
-- Interface exclusivement mobile (320–480 px), surfaces et hiérarchie LinKs, accents cyan/violet/rose. Navigation basse Statistiques / Stories ; le brouillon et la position de lecture sont conservés lors du changement de vue, dans la page en cours.
+- Interface exclusivement mobile (320–480 px), surfaces et hiérarchie LinKs, accents cyan/violet/rose. Navigation basse Statistiques / Stories / Liens ; le brouillon et la position de lecture sont conservés lors du changement de vue, dans la page en cours.
 - Dernière vidéo YouTube de la source LinKs existante : titre, miniature, préparation d’un lien court propre à cette vidéo et d’une image verticale 1080 × 1920 avec fond flou.
 - Offres actives : petite image et titre ; liens privés suivis : maillon, nom et recherche sur toute la liste fournie. Liens classiques exclus.
 - L’éditeur apparaît immédiatement sous le contenu choisi. Photo/vidéo du téléphone possible pour ce contenu ; aucun bloc « Photo personnelle » séparé. Les photos restent locales, les images sont préparées en JPEG 1080 × 1920 sans recadrer leur contenu ; les vidéos sont partagées dans leur format original (sans promesse de conversion ou de compatibilité Instagram).
@@ -16,7 +18,7 @@ Application mobile de préparation de Stories et de consultation des clics LinKs
 
 Le nouveau service worker attend une validation dans la notification « Mise à jour disponible ». Le rechargement est bloqué tant qu’une Story est en préparation, y compris si elle démarre pendant l’activation ; « Plus tard » conserve la page ouverte. Une validation dans un autre onglet ne recharge jamais celui qui contient une préparation. Après la confirmation manuelle de publication, la mise à jour peut être acceptée. Les préparations restent uniquement en mémoire : aucune sauvegarde persistante de média, lien ou donnée privée n’est ajoutée ; fermer l’application ou recharger manuellement peut toujours les perdre.
 
-Seuls le manifeste, les icônes et la page hors connexion avec sa feuille de style sont précachés, depuis une liste fixe et sans identifiants. Le téléchargement valide statut et type de contenu, refuse les redirections et expire après 15 secondes. Un échec laisse l’ancienne version active. Les caches PulSe précédents sont supprimés à l’activation, sans toucher aux autres caches. Incrémenter `VERSION` dans `sw.js` à chaque changement de ces ressources publiques. La recherche de mise à jour ignore le cache HTTP et reprend au retour en ligne/au premier plan, puis chaque heure visible.
+Seuls le manifeste, les icônes et la page hors connexion avec sa feuille de style sont précachés, depuis une liste fixe et sans identifiants. Le téléchargement valide statut et type de contenu, refuse les redirections et expire après 15 secondes. Un échec laisse l’ancienne version active. Les caches PulSe précédents sont supprimés à l’activation, sans toucher aux autres caches. Incrémenter `VERSION` dans `sw.js` à chaque mise à jour de l’application pour proposer son rechargement explicite, même si les seules ressources précachées restent publiques. La recherche de mise à jour ignore le cache HTTP et reprend au retour en ligne/au premier plan, puis chaque heure visible.
 
 La recette navigateur couvre les vraies transitions du service worker, un échec d’installation, deux onglets avec photos/vidéos, la confirmation de rechargement, une préparation démarrée pendant l’activation, les zones `maskable`, le nettoyage et l’exclusion des données privées du cache, ainsi que la navigation hors connexion. Elle ne remplace pas l’installation physique sur Samsung derrière Pangolin.
 
@@ -33,7 +35,7 @@ La préparation du visuel est indépendante de celle du lien. Si LinKs est trop 
 
 ## Charte graphique et graphique mobile
 
-La référence visuelle fournie est appliquée aux surfaces navy/noir, contours cyan lumineux, cartes en dégradé et boutons bleu électrique. Ses anciens logo graphique et badge de version ne sont pas repris : le mot PulSe reste seul dans l’en-tête et la version au footer.
+La référence visuelle fournie est appliquée aux surfaces navy/noir, contours cyan lumineux, cartes en dégradé et boutons bleu électrique. Le logo officiel PulSe fourni est affiché dans l’en-tête ; la version reste au footer.
 
 Les valeurs de l’histogramme sont blanches, contrastées et rendues à **15 pixels réels minimum** dans la recette mobile (pas réduites par une grande vue SVG). La période 30 jours se parcourt horizontalement ; toucher une barre ou la parcourir au clavier affiche son jour et sa valeur en texte. Le tableau accessible reste disponible. Aucune donnée de démonstration n’est injectée dans l’application.
 
@@ -75,7 +77,7 @@ PULSE_BRIDGE_TOKEN=
 
 Le Compose conserve `name: links-pulse-test`, l’alias `pulse-story-spike-test`, le réseau externe `pangolin`, le port lié à 127.0.0.1 et `/healthz`. Pangolin termine HTTPS et conserve sa cible `http://pulse-story-spike-test:4173` ; ne pas modifier LinKs, son volume ou ses ressources réseau pour déployer PulSe. Le service et le nom de stack existants doivent rester identiques pour éviter deux conteneurs utilisant le même alias.
 
-`compose.yaml` utilise désormais l’image publique versionnée `ghcr.io/mick7784/links-pulse:${PULSE_VERSION:-1.1.2}`, sans contexte Git ni compilation locale. `pull_policy: always` télécharge l’image lors d’un redéploiement. Le vrai `.env` de Dockhand doit contenir `PULSE_VERSION=1.1.1` ainsi que les secrets préexistants ; `.env.example` n’est qu’un modèle et ne contient aucun secret.
+`compose.yaml` utilise désormais l’image publique versionnée `ghcr.io/mick7784/links-pulse:${PULSE_VERSION:-1.1.2}`, sans contexte Git ni compilation locale. `pull_policy: always` télécharge l’image lors d’un redéploiement. Le vrai `.env` de Dockhand conserve la version actuellement validée et les secrets préexistants ; `.env.example` n’est qu’un modèle et ne contient aucun secret.
 
 Avant toute mise à jour : conserver le Compose et l’image V1, les variables, la cible Pangolin et la possibilité de reconstruire/revenir à la V1. LinKs V1.316 est publiée : s’assurer qu’elle est aussi *déployée* avant de tester les liens YouTube suivis et les statistiques 30 jours. Une fusion de PR ne déploie jamais PulSe. Depuis la V1.1.1, le pipeline de release publie une image GHCR versionnée depuis `main` après validation ; le déploiement reste manuel dans Dockhand.
 
@@ -103,7 +105,7 @@ Voir [la recette physique](docs/RECETTE.md) et [les changements](docs/V1.1.md). 
 Le Compose conserve le nom de projet `links-pulse-test`, l'alias Pangolin `pulse-story-spike-test`, le réseau externe et les restrictions du conteneur. Il ne contient plus de `build:` local. Pour mettre à jour PulSe dans Dockhand :
 
 1. Sauvegarder le Compose, les valeurs de l'environnement et l'image actuelle (pour retour arrière). Ne pas copier les secrets dans Git.
-2. Remplacer le Compose de la stack existante par `compose.yaml` de la branche `main` ; ajouter `PULSE_VERSION=1.1.1` au `.env` réel de la stack, sans modifier les autres variables.
+2. Remplacer le Compose de la stack existante par `compose.yaml` de la branche `main` ; renseigner dans le `.env` réel le tag effectivement publié et autorisé, sans modifier les autres variables. Ne pas choisir un tag à partir du numéro technique de cette branche.
 3. Redéployer **la stack existante** ; ne pas créer un deuxième service sur le même alias. Docker récupère l'image versionnée depuis GHCR. Vérifier le healthcheck et la cible Pangolin.
 4. En cas de problème, remettre l'ancien Compose et l'ancienne image. Pour les futures versions, changer `PULSE_VERSION` vers un tag *publié* puis redéployer.
 
@@ -114,6 +116,6 @@ Si GHCR refuse un téléchargement anonyme, vérifier la visibilité publique du
 
 Le manifeste, les icônes, la page hors-ligne et le service worker sont accessibles sans Basic Auth, afin que Chrome Android puisse récupérer les métadonnées d'installation (le manifeste HTML indique également `crossorigin="use-credentials"`). Les pages d'application, scripts et APIs continuent d'exiger l'authentification. Le service worker ne met **jamais** en cache le tableau de bord authentifié, les liens, les images personnelles ou les API.
 
-La CI vérifie le manifeste via l'API Chromium et le service worker, mais le statut « application installée » ne peut être confirmé qu'après un test sur le vrai Samsung, depuis l'URL HTTPS Pangolin et hors navigateur intégré à une autre application. Si Chrome n'offre que « raccourci », vérifier le certificat HTTPS, l'accès public HTTP 200 au manifeste/icônes et les éventuelles protections supplémentaires du proxy.
+La CI vérifie le manifeste via l'API Chromium et le service worker, mais le statut « application installée » ne peut être confirmé qu'après un test sur le vrai Samsung, depuis l'URL HTTPS Pangolin et hors navigateur intégré à une autre application. Si Chrome n'offre que « raccourci », vérifier le certificat HTTPS, l'accès HTTP 200 au manifeste/icônes depuis le réseau privé autorisé et les éventuelles protections supplémentaires du proxy.
 
-Pour utiliser cette image depuis Dockhand : `PULSE_VERSION=1.1.2`, puis redéployer la stack existante. Pour revenir en arrière : `PULSE_VERSION=1.1.1`. La charte graphique V1.2 reste un chantier distinct.
+Ce paragraphe décrit la release historique V1.1.2, pas la refonte de cette branche. Pour une livraison future, choisir uniquement une image publiée après autorisation ; conserver le tag et le digest réellement en service pour le retour arrière. La charte mobile est intégrée à cette branche, sans nouvelle release à ce stade.

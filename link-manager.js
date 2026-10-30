@@ -3,9 +3,9 @@ import {initPublication} from './publication.js';
 export function initLinkManager({onDraft,onSaved,onStoryLink,onStoryBack}){
  const $=id=>document.getElementById(id),form=$('link-form');
  let data={items:[],partners:[],sources:[]},current=null,shareItem=null,receipt=null,preview=null,dirty=false,busy=false,loaded=false,ticket=0,shareTicket=0,debounce,forStory=false;
- const publication=initPublication({onDraft});let loading;
+ const publication=initPublication({onDraft:()=>draft()});let loading;
  const status=text=>{$('links-status').textContent=text};
- const draft=()=>{onDraft();$('link-form-dot').hidden=!dirty};
+ const draft=()=>{onDraft();$('link-form-dot').hidden=!(dirty||busy||publication.hasDraft())};
  const node=(tag,text)=>{const el=document.createElement(tag);el.textContent=text;return el};
  async function api(action,body){
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);

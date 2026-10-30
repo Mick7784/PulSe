@@ -1,10 +1,12 @@
-# Recette PulSe V1.1 avant production
+# Recette physique de la refonte PulSe avant production
+
+**À réaliser, non validée par les tests bureau.** Le [bilan final](VALIDATION-FINALE.md) distingue les preuves automatiques des vérifications VPS et Samsung. La cible de recette doit fournir l’extension LinKs `dfc67c4` (ou un successeur explicitement validé), avec HTTP Basic conservé.
 
 ## Préparer l’environnement
 
-Préserver la stack V1 et son image. Utiliser une origine HTTPS de test et une instance LinKs de test disposant de l’extension V1.1. Les secrets restent dans les variables Dockhand. Ne pas remplacer l’alias Pangolin de la stack utilisée tant que cette recette n’est pas acceptée. Aucun déploiement n’a été effectué par ce chantier.
+Préserver la stack V1 et son image. Utiliser une origine HTTPS de test et une instance LinKs de test disposant du bridge de gestion des liens et de synthèse mobile. Les secrets restent dans les variables Dockhand. Ne pas remplacer l’alias Pangolin de la stack utilisée tant que cette recette n’est pas acceptée. Aucun déploiement n’a été effectué par ce chantier.
 
-## Correctif 1.1.1
+## Compatibilité et parcours existants
 
 Contrôler sur téléphone la présence du parcours visuel → copie → partage → sticker/publication → déclaration manuelle. Un partage résolu ou un retour d’Instagram ne termine jamais automatiquement le parcours. Le lien doit exister et être copié pour terminer ; avec LinKs V1.315 sans extension YouTube, vérifier le message explicite, le visuel encore préparé, le partage bloqué et la nouvelle tentative après mise à jour validée de la liaison.
 
@@ -12,9 +14,9 @@ Sur l’histogramme : valeurs blanches lisibles sans zoom en 7 jours, balayage h
 
 ## Samsung / Chrome puis PWA
 
-Noter téléphone, Android, Chrome et version Instagram. Répéter sur la V1 et la V1.1 pour comparer le comportement réel.
+Noter téléphone, Android, Chrome et version Instagram. Comparer avec la version réellement en service, puis noter le commit et l’image de la version candidate.
 
-1. Ouvrir PulSe : texte seul dans l’en-tête, version au footer, panneau Story fermé, statistiques visibles.
+1. Ouvrir PulSe : logo officiel dans l’en-tête, version au footer, panneau Story fermé, statistiques visibles, navigation Statistiques / Stories / Liens.
 2. Choisir 7 puis 30 jours. Comparer total/jours à la base LinKs de test et au tableau du graphique. Couper l’accès au backend : valeurs « — », aucun graphique périmé.
 3. Préparer la dernière vidéo. Vérifier titre/miniature, aperçu vertical et lien court. Copier le lien puis partager le JPEG avec deux taps distincts. Choisir Instagram/Story si proposé, ajouter le sticker Lien, coller, publier dans une audience de test.
 4. Ouvrir ce sticker une fois depuis un navigateur normal. Vérifier destination de la vidéo, compteur quotidien et clic Story ; une simple préparation/copie ne doit pas compter comme clic. Faire évoluer ensuite la dernière vidéo LinKs : l’ancien lien reste dirigé vers sa vidéo d’origine.

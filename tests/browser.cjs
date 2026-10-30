@@ -13,7 +13,7 @@ const close=s=>new Promise(r=>s.close(r));
   const u=new URL(req.url,'http://localhost');res.setHeader('Content-Type','application/json');
   const json=x=>res.end(JSON.stringify(x));
   if(u.pathname==='/api/public-config')return json({links:[{id:'offer',type:'promo',title:'Offre de test · capteur connecté',url:'https://partner.example/offer',image:'/uploads/test.png',description:'Cette description ne doit pas apparaître en ligne'}]});
-  if(u.pathname==='/latest-video.json')return json({title:'Vidéo de test · une maison connectée plus simple',url:'https://youtu.be/'+id,thumbnail:'https://i.ytimg.com/vi/'+id+'/hqdefault.jpg'});
+  if(u.pathname==='/latest-video.json')return json({title:'Vidéo de test · une maison connectée plus simple',url:'https://youtu.be/'+id,thumbnail:'https://i.ytimg.com/vi/'+id+'/hqdefault.jpg',published:'2026-10-01T12:00:00Z'});
   if(u.pathname==='/api/pulse/links')return json({links:Array.from({length:35},(_,i)=>({id:'link'+i,name:'Lien suivi '+i,url:'https://partner.example/'+i,enabled:true,archived:false}))});
   if(u.pathname==='/api/pulse/stats'){if(failStats){res.statusCode=503;return json({})}const n=Number(u.searchParams.get('days')||7),days=Array.from({length:n},(_,i)=>({date:new Date(Date.UTC(2026,9,24-n+i)).toISOString().slice(0,10),clicks:i}));return json({period:n,total:days.reduce((s,d)=>s+d.clicks,0),today:n-1,last7:days.slice(-7).reduce((s,d)=>s+d.clicks,0),stories:3,days})}
   if(u.pathname==='/api/pulse/story-link'){if(failVideoLink){res.statusCode=400;return json({error:'Type PulSe invalide'})}return json({url:'https://links.example/a12345678'})}
@@ -38,6 +38,8 @@ const close=s=>new Promise(r=>s.close(r));
   const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));page.on('dialog',dialog=>dialog.accept());
   await mkdir(process.env.PULSE_SCREENSHOT_DIR||resolve(__dirname,'../../screenshots'),{recursive:true});
   await page.goto(base);await page.waitForFunction(()=>document.getElementById('stat-today').textContent==='6');
+  assert.equal(await page.evaluate(()=>{const ids=[...document.querySelectorAll('[id]')].map(el=>el.id);return ids.length===new Set(ids).size}),true,'unique IDs keep Story and text controls independent');
+  await page.waitForFunction(()=>document.querySelector('.video-date')?.textContent.includes('2026'));
   // Real Chromium manifest/installability API: do not simulate beforeinstallprompt here.
   await page.waitForFunction(async()=>!!(await navigator.serviceWorker.getRegistration())?.active);
   const cdp=await context.newCDPSession(page);

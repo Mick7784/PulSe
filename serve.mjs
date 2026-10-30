@@ -5,9 +5,10 @@ import { readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { httpURL, normalizeCatalog, normalizeTrackedLinks, normalizeStats, normalizeVideo, safeImageRef } from './catalog.mjs';
 import {managerRequest,managerResponse,matches} from './link-api.mjs';
+import {normalizeInsights} from './insights.mjs';
 
 const ROOT = new URL('./', import.meta.url);
-const STATIC = new Set(['index.html','app.js','link-manager.js','pwa.mjs','style.css','brand-pulse.png','manifest.webmanifest','icon.svg','icon-192.png','icon-512.png','icon-maskable-192.png','icon-maskable-512.png','sw.js','offline.html','offline.css']);
+const STATIC = new Set(['index.html','app.js','link-manager.js','publication.js','pwa.mjs','style.css','brand-pulse.png','manifest.webmanifest','icon.svg','icon-192.png','icon-512.png','icon-maskable-192.png','icon-maskable-512.png','sw.js','offline.html','offline.css']);
 // Public installation metadata only; application HTML, scripts and all APIs stay authenticated.
 const PUBLIC_PWA = new Set(['/manifest.webmanifest','/icon.svg','/icon-192.png','/icon-512.png','/icon-maskable-192.png','/icon-maskable-512.png','/sw.js','/offline.html','/offline.css']);
 const MIME = {html:'text/html; charset=utf-8',js:'text/javascript; charset=utf-8',mjs:'text/javascript; charset=utf-8',css:'text/css; charset=utf-8',webmanifest:'application/manifest+json',svg:'image/svg+xml',png:'image/png'};
@@ -119,6 +120,14 @@ export function createPulseServer({ user='',password='', linksURL='http://domoti
         if(!bridgeToken)return responseJson(res,200,{available:false,reason:'Connexion sécurisée des statistiques LinKs à finaliser.'});
         try {const stats=normalizeStats(await requestLinks('/api/pulse/stats?days='+period,{privateAccess:true}),period);return responseJson(res,200,{available:true,...stats})}
         catch {return responseJson(res,200,{available:false,reason:'La passerelle statistique LinKs ne répond pas.'})}
+      }
+      if(req.method==='GET'&&route.pathname==='/api/insights') {
+        const requested=route.searchParams.getAll('days');
+        if(requested.length>1||(requested.length&&!['7','30'].includes(requested[0])))return responseJson(res,400,{error:'Choisissez 7 ou 30 jours.'});
+        const period=Number(requested[0]||7);
+        if(!bridgeToken)return responseJson(res,200,{available:false,reason:'Connexion sécurisée LinKs nécessaire.'});
+        try{return responseJson(res,200,{available:true,...normalizeInsights(await requestLinks('/api/pulse/insights?days='+period,{privateAccess:true}),period)})}
+        catch{return responseJson(res,200,{available:false,reason:'Synthèse indisponible. Vérifiez la connexion ou la version du bridge LinKs.'})}
       }
       if(req.method==='POST'&&route.pathname==='/api/story-link') {
         let body;try{body=await readJson(req)}catch{return responseJson(res,400,{error:'Demande JSON invalide ou trop volumineuse.'})}

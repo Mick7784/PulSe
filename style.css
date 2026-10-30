@@ -20,6 +20,11 @@
 .campaign-details { margin:12px 0; padding:12px; background:var(--accent-soft); border-radius:10px; font-size:.8125rem; overflow-wrap:anywhere; }
 .campaign-details p + p { margin-top:6px; }
 #link-story-context button { margin-top:8px; }
+.link-form textarea { width:100%; min-width:0; resize:vertical; padding:12px; background:var(--bg); color:var(--text); border:1px solid var(--line); border-radius:10px; font:inherit; font-size:1rem; }
+#publication-open { display:inline-flex; align-items:center; min-height:44px; padding:10px 12px; border:1px solid var(--line); border-radius:10px; text-decoration:none; }
+.insight-sources p { display:flex; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px solid var(--line); font-size:.8125rem; }
+.insight-sources span { overflow-wrap:anywhere; }
+#insights-content h4 { margin:16px 0 8px; }
 .update-notice {
   margin-bottom:18px;
   padding:12px;

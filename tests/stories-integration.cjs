@@ -7,7 +7,7 @@ module.exports=async function({page,context,api,fixture,control}){
  await page.evaluate(()=>{
   window.storyShares=[];window.cancelStoryShare=false;
   Object.defineProperty(navigator,'canShare',{value:()=>true});
-  Object.defineProperty(navigator,'share',{value:data=>{window.storyShares.push({keys:Object.keys(data),files:data.files,active:navigator.userActivation.isActive});return window.cancelStoryShare?Promise.reject(new DOMException('cancelled','AbortError')):Promise.resolve()}});
+  Object.defineProperty(navigator,'share',{configurable:true,value:data=>{window.storyShares.push({keys:Object.keys(data),files:data.files,active:navigator.userActivation.isActive});return window.cancelStoryShare?Promise.reject(new DOMException('cancelled','AbortError')):Promise.resolve()}});
  });
  const statsBefore=(await api('stats')).data;
  const cat=(await api('catalog?refresh=1')).data;

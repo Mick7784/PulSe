@@ -16,7 +16,8 @@ module.exports=async function(){
   if(path==='/api/public-config')return json({links:[]});
   if(path==='/latest-video.json')return json(null);
   if(path==='/api/pulse/links')return json({links:[{id:'draft',name:'Lien de recette',url:'https://example.com',enabled:true,archived:false}]});
-  if(path==='/api/pulse/link-manager')return json({version:1,items:[],partners:[],sources:[]});
+  if(path==='/api/pulse/link-manager')return json({version:1,items:[{id:'draft',name:'Lien de recette',url:'https://example.com',original_url:'https://example.com',revision:'test'}],partners:[],sources:[{id:'discord',name:'Discord',platform:'discord'}]});
+  if(path==='/api/pulse/link-token')return json({url:'https://links.example/discord12',source_id:'discord'});
   if(path==='/api/pulse/story-link')return json({url:'https://links.example/test12345'});
   if(path==='/api/pulse/stats')return json({period:7,total:0,today:0,last7:0,stories:0,days:Array.from({length:7},(_,i)=>({date:'2026-10-'+(20+i),clicks:0}))});
   return new Response('{}',{status:404});
@@ -194,7 +195,15 @@ module.exports=async function(){
   linkDraft.once('dialog',dialog=>dialog.accept());await linkDraft.locator('#link-close').click();
   assert.equal(await linkDraft.locator('#update-apply').isEnabled(),true);
   await Promise.all([linkDraft.waitForEvent('framenavigated',frame=>frame===linkDraft.mainFrame()),linkDraft.locator('#update-apply').click()]);
-  assert.equal(linkLoads,linkBefore+1);await linkDraft.close();await clean.close();
+  assert.equal(linkLoads,linkBefore+1);
+  await linkDraft.locator('#nav-links').click();await linkDraft.locator('.managed-link').getByRole('button',{name:'Partager',exact:true}).click();await linkDraft.locator('#link-source').selectOption('discord');await linkDraft.locator('#link-generate').click();await linkDraft.waitForFunction(()=>!!document.getElementById('link-short').value);
+  await linkDraft.locator('#publication-text').fill('Texte privé à conserver');const publicationLoads=linkLoads;
+  build=6;await update(clean);await linkDraft.waitForFunction(()=>!document.getElementById('update-notice').hidden);assert.equal(await linkDraft.locator('#update-apply').isDisabled(),true);
+  await Promise.all([clean.waitForEvent('framenavigated',frame=>frame===clean.mainFrame()),clean.locator('#update-apply').click()]);
+  await linkDraft.waitForFunction(async()=>!(await navigator.serviceWorker.getRegistration()).waiting);
+  assert.equal(linkLoads,publicationLoads);assert.equal(await linkDraft.locator('#publication-text').inputValue(),'Texte privé à conserver');assert.equal(await linkDraft.locator('#update-apply').isDisabled(),true);
+  await linkDraft.locator('#publication-copy').click();await linkDraft.locator('#publication-confirm-check').check();await linkDraft.locator('#publication-confirm').click();assert.equal(await linkDraft.locator('#update-apply').isEnabled(),true);
+  await linkDraft.close();await clean.close();
 
   // Real offline navigation and exclusion of all private or query-bearing requests.
   const offline=await context.newPage();await offline.goto(base);await offline.waitForFunction(()=>document.getElementById('stat-today')?.textContent==='0');
@@ -204,7 +213,7 @@ module.exports=async function(){
    for(const key of keys.filter(key=>key.startsWith('pulse-')))for(const req of await(await caches.open(key)).keys())assets.push(new URL(req.url).pathname);
    return {keys,assets,local:localStorage.length,databases:(await indexedDB.databases()).length};
   });
-  assert.deepEqual(cacheState.keys.sort(),['another-app','pulse-public-pwa3-test-5']);
+  assert.deepEqual(cacheState.keys.sort(),['another-app','pulse-public-pwa3-test-6']);
   assert.deepEqual(cacheState.assets.sort(),['/manifest.webmanifest','/icon.svg','/icon-192.png','/icon-512.png','/icon-maskable-192.png','/icon-maskable-512.png','/offline.html','/offline.css'].sort());
   assert.equal(cacheState.local,0);assert.equal(cacheState.databases,0);
   await context.setOffline(true);await offline.reload();

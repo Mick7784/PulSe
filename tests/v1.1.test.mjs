@@ -10,6 +10,9 @@ const open=async s=>{await new Promise(r=>s.listen(0,'127.0.0.1',r));return 'htt
 const close=s=>new Promise(r=>s.close(r));
 test('YouTube metadata accepts only a video ID and matching trusted thumbnail',()=>{
  const v=normalizeVideo({url:'https://youtu.be/'+id,title:'Test',thumbnail:'https://i.ytimg.com/vi/'+id+'/hqdefault.jpg'});assert.equal(v.id,id);
+ assert.equal(v.published,'');
+ assert.equal(normalizeVideo({url:'https://youtu.be/'+id,published:'2026-10-01T12:00:00Z'}).published,'2026-10-01T12:00:00.000Z');
+ assert.equal(normalizeVideo({url:'https://youtu.be/'+id,published:'not a date'}).published,'');
  assert.equal(normalizeVideo({url:'https://youtube.com.evil.test/watch?v='+id}),null);
  assert.equal(normalizeVideo({url:'https://www.youtube.com/watch?v='+id,thumbnail:'https://evil.test/a.png'}).thumbnail,'');
  assert.equal(normalizeVideo({url:'https://www.youtube.com/watch?v='+id,thumbnail:'https://i.ytimg.com/vi/other-id/hqdefault.jpg'}).thumbnail,'');

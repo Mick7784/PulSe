@@ -30,6 +30,12 @@ Safari → Partager → Sur l’écran d’accueil. Tester onglet et mode instal
 
 ## Vérification finale
 
+### Complément phase 7 — à réaliser physiquement
+
+Depuis Liens → Partager, choisir successivement YouTube puis Discord et comparer les URL courtes avec LinKs. Saisir un texte, refuser puis confirmer manuellement la copie, annuler puis réussir le partage natif. Vérifier la plateforme et le destinataire avant de publier manuellement. Changer de source ou modifier le texte doit exiger une nouvelle copie/confirmation, en conservant le texte. Tester une saisie trop longue, une coupure/reconnexion VPN, le changement de vue et une mise à jour PWA avec texte ouvert. La confirmation PulSe ne doit ni envoyer un message ni augmenter les statistiques.
+
+Ouvrir ensuite chaque lien de recette depuis un autre navigateur : vérifier l'attribution à la bonne source et les classements 7/30 jours. Les classements portent seulement sur les liens suivis, avec cinq résultats au maximum ; le compteur de campagnes décrit l'éligibilité actuelle. En cas de connexion perdue ou de bridge ancien, aucun classement périmé ne doit rester visible. Vérifier le raccourci d'un lien actif depuis la carte et l'indisponibilité d'un lien archivé. La date de vidéo doit correspondre à la donnée LinKs, lorsqu'elle existe.
+
 ### Complément phase 6 — à réaliser sur Samsung
 
 1. Avec au moins cinq campagnes éligibles dans LinKs, retrouver une campagne hors des trois emplacements publics, y compris une campagne historique `featured`. Rechercher son titre ou code promo ; vérifier son visuel spécifique ou par défaut et les informations dans la préparation.

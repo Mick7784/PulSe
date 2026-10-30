@@ -94,6 +94,7 @@ const {chromium}=require('playwright');
   await page.locator('#link-source').selectOption(source('instagram'));await page.locator('#link-generate').click();await page.waitForFunction(()=>!!document.getElementById('link-short').value);
   await page.locator('.managed-link').filter({hasText:'Accueil sans chemin'}).getByRole('button',{name:'Modifier'}).click();await preview('https://HOME.example');assert.equal(await page.locator('#link-change-warning').isVisible(),false);
   await require('./stories-integration.cjs')({page,context,api,fixture,control});
+  await require('./multichannel-integration.cjs')({page,context,api,fixture});
   assert.deepEqual(errors,[]);
   console.log('PASS REAL LinKs + PulSe + SQLite + Chromium: affiliation/manual/None, preview confirmation, create/edit, transaction duplicates and reuse, lost committed response, source tokens, legacy aliases/statistics, authentication, clipboard fallback, offline drafts, stale previews, mobile widths and no private cache. No physical Samsung test.');
  }finally{

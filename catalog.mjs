@@ -56,6 +56,7 @@ export function normalizeVideo(raw){
     ['youtube.com','www.youtube.com'].includes(parsed.hostname)&&parsed.pathname==='/watch'?parsed.searchParams.get('v'):'';
   if(!/^[A-Za-z0-9_-]{11}$/.test(id||''))return null;
   let thumbnail='';try{const u=new URL(raw.thumbnail);if(u.protocol==='https:'&&u.hostname==='i.ytimg.com'&&!u.username&&!u.password&&u.pathname.startsWith('/vi/'+id+'/'))thumbnail=u.href}catch{}
-  return {id,title:clamp(raw.title,180)||'Vidéo YouTube',url:'https://www.youtube.com/watch?v='+id,thumbnail,type:'youtube'};
+  const published=typeof raw.published==='string'&&/^\d{4}-\d{2}-\d{2}T/.test(raw.published)&&Number.isFinite(Date.parse(raw.published))?new Date(raw.published).toISOString():'';
+  return {id,title:clamp(raw.title,180)||'Vidéo YouTube',url:'https://www.youtube.com/watch?v='+id,thumbnail,published,type:'youtube'};
 }
 export function safeImageRef(ref){return typeof ref==='string'&&/^\/(uploads|assets)\/[A-Za-z0-9._-]{1,200}$/.test(ref)}

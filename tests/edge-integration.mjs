@@ -69,9 +69,10 @@ try{
  const catalog=await request('private','pulse.test','/api/catalog',{Authorization:auth});
  assert.equal(JSON.parse(catalog.body).trackedAvailable,true);assert.ok(!catalog.body.includes(secret));
  assert.equal(JSON.parse((await request('private','pulse.test','/api/stats',{Authorization:auth})).body).available,true);
+ assert.equal(await count(),2,'catalogue and statistics use only the internal bridge');
  const story=await request('private','pulse.test','/api/story-link',{Authorization:auth,'Content-Type':'application/json','X-PulSe-Request':'1'},'POST',JSON.stringify({type:'independent',id:'private'}));
  assert.deepEqual(JSON.parse(story.body),{url:'https://links.test/abc123456',tracked:true});
- assert.equal(await count(),3);
+ assert.equal(await count(),4,'Story preparation refreshes eligibility before requesting its tracked link');
  // Validate the candidate Compose without printing its interpolated secrets.
  const env={...process.env,PULSE_PRIVATE_IMAGE:'pulse-validation',PULSE_TEST_USER:'admin',PULSE_TEST_PASSWORD:password,PULSE_BRIDGE_TOKEN:secret,LINKS_PUBLIC_URL:'http://links:8080',LINKS_BRIDGE_URL:'http://links:8080',PULSE_PRIVATE_NETWORK:'fixture-private',LINKS_BRIDGE_NETWORK:'fixture-bridge'};
  const compose=JSON.parse(execFileSync('docker',['compose','-f',resolve('security/compose.private.yaml'),'config','--format','json'],{env,encoding:'utf8'}));

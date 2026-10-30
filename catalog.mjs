@@ -7,15 +7,15 @@ export function httpURL(value) {
 export function normalizeCatalog(payload) {
   if(!payload||!Array.isArray(payload.links))throw new Error('Réponse LinKs incompatible.');
   const campaigns=[];
-  for(const raw of payload.links.slice(0,400)) {
+  for(const raw of payload.links) {
     if(!raw||typeof raw!=='object')continue;
-    const type=raw.type==='promo'?'promo':null;
+    const type=['promo','featured'].includes(raw.type)?raw.type:null;
     if(!type)continue;
     const url=httpURL(raw.url);
     if(!url)continue;
-    const item={id:clamp(raw.id,90),title:clamp(raw.title,180)||'Sans titre',description:clamp(raw.description,240),url,image:clamp(raw.image,240),promoCode:clamp(raw.promo_code,100),type,startAt:clamp(raw.start_at,35),endAt:clamp(raw.end_at,35)};
+    const item={id:clamp(raw.id,90),title:clamp(raw.title,180)||'Sans titre',description:clamp(raw.description,240),url,image:clamp(raw.effective_image??raw.image,240),promoCode:clamp(raw.promo_code,100),type,startAt:clamp(raw.start_at,35),endAt:clamp(raw.end_at,35)};
     if(!item.id)continue;
-    // Neither classic links nor featured non-promotional blocks are Story offers.
+    // LinKs supplies all eligible campaigns; visible_campaign_ids is only for its public page.
     campaigns.push(item);
   }
   return {campaigns,trackedLinks:[],trackedAvailable:false,timezone:clamp(payload.timezone,80)||'Europe/Paris',updatedAt:new Date().toISOString(),source:'links-public'};
@@ -28,7 +28,7 @@ export function normalizeTrackedLinks(raw) {
     const id=clamp(item.id,100),title=clamp(item.name,180),url=httpURL(item.url);
     if(!id||!title||!url||seen.has(id))continue;
     seen.add(id);
-    result.push({id,title,description:clamp(item.category,180),url,image:'',type:'independent',promoCode:''});
+    result.push({id,title,description:'',url,image:'',type:'independent',promoCode:''});
   }
   return result;
 }
@@ -56,6 +56,7 @@ export function normalizeVideo(raw){
     ['youtube.com','www.youtube.com'].includes(parsed.hostname)&&parsed.pathname==='/watch'?parsed.searchParams.get('v'):'';
   if(!/^[A-Za-z0-9_-]{11}$/.test(id||''))return null;
   let thumbnail='';try{const u=new URL(raw.thumbnail);if(u.protocol==='https:'&&u.hostname==='i.ytimg.com'&&!u.username&&!u.password&&u.pathname.startsWith('/vi/'+id+'/'))thumbnail=u.href}catch{}
-  return {id,title:clamp(raw.title,180)||'Vidéo YouTube',url:'https://www.youtube.com/watch?v='+id,thumbnail,type:'youtube'};
+  const published=typeof raw.published==='string'&&/^\d{4}-\d{2}-\d{2}T/.test(raw.published)&&Number.isFinite(Date.parse(raw.published))?new Date(raw.published).toISOString():'';
+  return {id,title:clamp(raw.title,180)||'Vidéo YouTube',url:'https://www.youtube.com/watch?v='+id,thumbnail,published,type:'youtube'};
 }
 export function safeImageRef(ref){return typeof ref==='string'&&/^\/(uploads|assets)\/[A-Za-z0-9._-]{1,200}$/.test(ref)}

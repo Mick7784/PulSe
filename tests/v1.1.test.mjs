@@ -10,6 +10,9 @@ const open=async s=>{await new Promise(r=>s.listen(0,'127.0.0.1',r));return 'htt
 const close=s=>new Promise(r=>s.close(r));
 test('YouTube metadata accepts only a video ID and matching trusted thumbnail',()=>{
  const v=normalizeVideo({url:'https://youtu.be/'+id,title:'Test',thumbnail:'https://i.ytimg.com/vi/'+id+'/hqdefault.jpg'});assert.equal(v.id,id);
+ assert.equal(v.published,'');
+ assert.equal(normalizeVideo({url:'https://youtu.be/'+id,published:'2026-10-01T12:00:00Z'}).published,'2026-10-01T12:00:00.000Z');
+ assert.equal(normalizeVideo({url:'https://youtu.be/'+id,published:'not a date'}).published,'');
  assert.equal(normalizeVideo({url:'https://youtube.com.evil.test/watch?v='+id}),null);
  assert.equal(normalizeVideo({url:'https://www.youtube.com/watch?v='+id,thumbnail:'https://evil.test/a.png'}).thumbnail,'');
  assert.equal(normalizeVideo({url:'https://www.youtube.com/watch?v='+id,thumbnail:'https://i.ytimg.com/vi/other-id/hqdefault.jpg'}).thumbnail,'');
@@ -63,7 +66,7 @@ test('bridge: strict 7/30 stats, immutable video request, safe visual proxy and 
 test('PWA installation resources are available without credentials while the dashboard and APIs stay private',async()=>{
  const server=createPulseServer({user:'admin',password:'long-password-123'}),base=await open(server);
  try{
-  for(const path of ['/manifest.webmanifest','/icon.svg','/icon-192.png','/icon-512.png','/sw.js','/offline.html']){
+  for(const path of ['/manifest.webmanifest','/icon.svg','/icon-192.png','/icon-512.png','/icon-maskable-192.png','/icon-maskable-512.png','/sw.js','/offline.html','/offline.css']){
    const response=await fetch(base+path);
    assert.equal(response.status,200,'public PWA asset: '+path);
    if(path==='/manifest.webmanifest'){
@@ -71,16 +74,17 @@ test('PWA installation resources are available without credentials while the das
     const manifest=await response.json();
     assert.equal(manifest.display,'standalone');
     assert.equal(manifest.start_url,'/');
-    assert.deepEqual(manifest.icons.map(icon=>icon.sizes),['192x192','512x512']);
+    assert.deepEqual(manifest.icons.map(icon=>[icon.sizes,icon.purpose]),[['192x192','any'],['512x512','any'],['192x192','maskable'],['512x512','maskable']]);
+    assert.equal(manifest.id,'/');assert.equal(manifest.scope,'/');
+    assert.equal(manifest.theme_color,'#070c14');assert.equal(manifest.background_color,'#070c14');
    }
   }
-  for(const path of ['/','/index.html','/app.js','/api/catalog','/api/stats','/api/visual']){
+  for(const path of ['/','/index.html','/app.js','/brand-pulse.png','/api/catalog','/api/stats','/api/visual']){
    assert.equal((await fetch(base+path)).status,401,'authenticated route: '+path);
   }
   const html=await(await fetch(base+'/',{headers:{Authorization:auth}})).text();
   assert.match(html,/rel="manifest"[^>]*crossorigin="use-credentials"/);
   const sw=await(await fetch(base+'/sw.js')).text();
-  assert.match(sw,/pulse-public-v1\.1\.2/);
-  assert.doesNotMatch(sw,/PUBLIC_SHELL=[^;]*\/api\//);
+  assert.match(sw,/credentials: 'omit'/);
  }finally{await close(server)}
 });

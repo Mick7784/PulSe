@@ -4,11 +4,13 @@ import { timingSafeEqual } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { httpURL, normalizeCatalog, normalizeTrackedLinks, normalizeStats, normalizeVideo, safeImageRef } from './catalog.mjs';
+import {managerRequest,managerResponse,matches} from './link-api.mjs';
+import {normalizeInsights} from './insights.mjs';
 
 const ROOT = new URL('./', import.meta.url);
-const STATIC = new Set(['index.html','app.js','pwa.mjs','style.css','manifest.webmanifest','icon.svg','icon-192.png','icon-512.png','sw.js','offline.html']);
+const STATIC = new Set(['index.html','app.js','link-manager.js','publication.js','pwa.mjs','style.css','brand-pulse.png','manifest.webmanifest','icon.svg','icon-192.png','icon-512.png','icon-maskable-192.png','icon-maskable-512.png','sw.js','offline.html','offline.css']);
 // Public installation metadata only; application HTML, scripts and all APIs stay authenticated.
-const PUBLIC_PWA = new Set(['/manifest.webmanifest','/icon.svg','/icon-192.png','/icon-512.png','/sw.js','/offline.html']);
+const PUBLIC_PWA = new Set(['/manifest.webmanifest','/icon.svg','/icon-192.png','/icon-512.png','/icon-maskable-192.png','/icon-maskable-512.png','/sw.js','/offline.html','/offline.css']);
 const MIME = {html:'text/html; charset=utf-8',js:'text/javascript; charset=utf-8',mjs:'text/javascript; charset=utf-8',css:'text/css; charset=utf-8',webmanifest:'application/manifest+json',svg:'image/svg+xml',png:'image/png'};
 const HEADERS = {
   'Cache-Control':'no-store', 'Referrer-Policy':'no-referrer',
@@ -50,6 +52,8 @@ export function createPulseServer({ user='',password='', linksURL='http://domoti
         try{const body=JSON.parse((await boundedBytes(r,8192)).toString('utf8'));
           error.unsupported=body.error==='Type PulSe invalide';
           error.changed=body.error==='La dernière vidéo a changé : actualisez PulSe';
+          error.code=['DUPLICATE','REVIEW_REQUIRED'].includes(body.code)?body.code:'';
+          if(error.code==='DUPLICATE')error.duplicates=matches(body.duplicates);
         }catch{}
         throw error;
       }
@@ -77,11 +81,34 @@ export function createPulseServer({ user='',password='', linksURL='http://domoti
   }
   const handler=async (req,res)=>{
     let route;try{route=new URL(req.url,'http://localhost')}catch{return responseJson(res,400,{error:'Adresse invalide.'})}
-    if(req.method==='GET'&&route.pathname==='/healthz')return responseJson(res,200,{status:'ok',version:'1.1.2'});
+    if(req.method==='GET'&&route.pathname==='/healthz')return responseJson(res,200,{status:'ok',version:'1.1.3'});
     if(user && !(req.method==='GET'&&PUBLIC_PWA.has(route.pathname)) && !sameSecret(req.headers.authorization,authValue)) {
       res.writeHead(401,{...HEADERS,'WWW-Authenticate':'Basic realm="PulSe", charset="UTF-8"'});return res.end('Connexion requise.');
     }
     try {
+      const action=route.pathname.slice('/api/'.length),managed=['link-manager','link-preview','link-save','link-token'].includes(action)&&route.pathname==='/api/'+action;
+      if(req.method==='POST'&&(managed||route.pathname==='/api/story-link')){
+        if(!req.headers['content-type']?.startsWith('application/json'))return responseJson(res,415,{error:'JSON requis.'});
+        if(req.headers.origin){let origin;try{origin=new URL(req.headers.origin).host}catch{return responseJson(res,403,{error:'Origine invalide.'})}if(origin!==req.headers.host)return responseJson(res,403,{error:'Origine externe interdite.'})}
+        if(req.headers['sec-fetch-site']==='cross-site'||req.headers['x-pulse-request']!=='1')return responseJson(res,403,{error:'Requête PulSe requise.'});
+      }
+      if(managed){
+        if(req.method!==(action==='link-manager'?'GET':'POST'))return responseJson(res,405,{error:'Méthode non autorisée.'});
+        if(!bridgeToken)return responseJson(res,503,{error:'Connexion sécurisée LinKs nécessaire.'});
+        let data;
+        if(req.method==='POST'){try{data=managerRequest(await readJson(req,32768))}catch{return responseJson(res,400,{error:'Demande invalide ou trop volumineuse.'})}}
+        try{
+          const result=managerResponse(action,await requestLinks('/api/pulse/'+action,{method:req.method,data,privateAccess:true}));
+          if(action==='link-save')catalogCache.until=0;
+          return responseJson(res,200,result);
+        }catch(error){
+          if(error.code==='DUPLICATE')return responseJson(res,409,{code:error.code,error:'Cette destination existe déjà. Réutilisez un lien ci-dessous.',duplicates:error.duplicates});
+          if(error.code==='REVIEW_REQUIRED')return responseJson(res,409,{code:error.code,error:'Le lien ou son aperçu a changé. Vérifiez à nouveau les informations dans LinKs avant de continuer.'});
+          if(error.status===400)return responseJson(res,400,{error:'Vérifiez le nom, la destination finale et les confirmations. Si la détection est ambiguë, choisissez un partenaire manuellement.'});
+          if(error.status===404)return responseJson(res,503,{error:'Cette fonction nécessite le nouveau bridge LinKs. Les Stories et statistiques restent disponibles.'});
+          return responseJson(res,503,{error:'Connexion LinKs indisponible. Votre saisie est conservée ; réessayez après reconnexion.'});
+        }
+      }
       if(req.method==='GET'&&route.pathname==='/api/catalog') {
         try{return responseJson(res,200,await loadCatalog(route.searchParams.get('refresh')==='1'))}
         catch{return responseJson(res,503,{error:'LinKs momentanément inaccessible : vérifie LINKS_PUBLIC_URL.'})}
@@ -94,13 +121,18 @@ export function createPulseServer({ user='',password='', linksURL='http://domoti
         try {const stats=normalizeStats(await requestLinks('/api/pulse/stats?days='+period,{privateAccess:true}),period);return responseJson(res,200,{available:true,...stats})}
         catch {return responseJson(res,200,{available:false,reason:'La passerelle statistique LinKs ne répond pas.'})}
       }
+      if(req.method==='GET'&&route.pathname==='/api/insights') {
+        const requested=route.searchParams.getAll('days');
+        if(requested.length>1||(requested.length&&!['7','30'].includes(requested[0])))return responseJson(res,400,{error:'Choisissez 7 ou 30 jours.'});
+        const period=Number(requested[0]||7);
+        if(!bridgeToken)return responseJson(res,200,{available:false,reason:'Connexion sécurisée LinKs nécessaire.'});
+        try{return responseJson(res,200,{available:true,...normalizeInsights(await requestLinks('/api/pulse/insights?days='+period,{privateAccess:true}),period)})}
+        catch{return responseJson(res,200,{available:false,reason:'Synthèse indisponible. Vérifiez la connexion ou la version du bridge LinKs.'})}
+      }
       if(req.method==='POST'&&route.pathname==='/api/story-link') {
-        if(!req.headers['content-type']?.startsWith('application/json'))return responseJson(res,415,{error:'JSON requis.'});
-        if(req.headers.origin){let origin;try{origin=new URL(req.headers.origin).host}catch{return responseJson(res,403,{error:'Origine invalide.'})}if(origin!==req.headers.host)return responseJson(res,403,{error:'Origine externe interdite.'})}
-        if(req.headers['sec-fetch-site']==='cross-site'||req.headers['x-pulse-request']!=='1')return responseJson(res,403,{error:'Requête PulSe requise.'});
         let body;try{body=await readJson(req)}catch{return responseJson(res,400,{error:'Demande JSON invalide ou trop volumineuse.'})}
         if(!body||!['campaign','independent','youtube'].includes(body.type)||typeof body.id!=='string'||body.id.length>100)return responseJson(res,400,{error:'Contenu PulSe invalide.'});
-        const cat=await loadCatalog();
+        const cat=await loadCatalog(true);
         if(body.type==='independent'&&(!bridgeToken||!cat.trackedAvailable))return responseJson(res,503,{error:'Liens suivis indisponibles : passerelle LinKs non connectée.'});
         const group=body.type==='campaign'?cat.campaigns:body.type==='youtube'?[cat.video].filter(Boolean):cat.trackedLinks;
         const item=group.find(x=>x.id===body.id);
@@ -113,6 +145,7 @@ export function createPulseServer({ user='',password='', linksURL='http://domoti
             if(error.status===401||error.status===403)return responseJson(res,503,{code:'BRIDGE_AUTH',error:'LinKs refuse la connexion sécurisée. Vérifiez la configuration de la liaison.'});
             if(body.type==='youtube'&&(error.unsupported||error.status===404))return responseJson(res,503,{code:'VIDEO_BRIDGE_REQUIRED',error:'La connexion LinKs doit être mise à jour pour préparer une Story YouTube.'});
             if(error.changed)return responseJson(res,409,{code:'VIDEO_CHANGED',error:'La dernière vidéo a changé. Actualisez PulSe puis sélectionnez la nouvelle vidéo.'});
+            if(error.status===400)return responseJson(res,409,{code:'SOURCE_UNAVAILABLE',error:'Cette source n’est plus disponible dans LinKs. Actualisez les contenus et choisissez une autre source ; votre média est conservé.'});
           }
           return responseJson(res,503,{error:'Impossible de créer le lien suivi LinKs. Réessaie plus tard.'});
         }
@@ -152,7 +185,7 @@ export async function startFromEnvironment(env=process.env) {
   const server=createPulseServer({user:env.PULSE_TEST_USER||'',password:env.PULSE_TEST_PASSWORD||'',linksURL:env.LINKS_PUBLIC_URL||'http://domotik-links:8080',bridgeToken:env.PULSE_BRIDGE_TOKEN||'',bridgeURL:env.LINKS_BRIDGE_URL||''});
   const host=env.PULSE_HOST||'127.0.0.1',port=Number(env.PULSE_PORT||4173);
   await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(port,host,resolve)});
-  console.log(`PulSe V1.1.2 : HTTP sur ${host}:${port}`);
+  console.log(`PulSe V1.1.3 : HTTP sur ${host}:${port}`);
   return server;
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href)startFromEnvironment().catch(e=>{console.error('Démarrage refusé :',e.message);process.exitCode=1});

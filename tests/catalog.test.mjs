@@ -2,14 +2,15 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {normalizeCatalog,normalizeTrackedLinks,safeImageRef,normalizeStats} from '../catalog.mjs';
 
-test('PulSe imports only active promotional offers, never classic or featured links',()=>{
- const raw={links:[{id:'offer',type:'promo',title:'Promo',url:'https://example.org/promo',image:'/uploads/abc.png'},
+test('PulSe imports all LinKs campaign types and effective visuals, never classic links',()=>{
+ const raw={visible_campaign_ids:['offer'],links:[{id:'offer',type:'promo',title:'Promo',url:'https://example.org/promo',image:'/uploads/abc.png',effective_image:'/uploads/default.webp'},
  {id:'feature',type:'featured',title:'Mise en avant',url:'https://example.org/feature'},
  {id:'classic',type:'classic',title:'Produit',url:'https://example.org/product'},
  {id:'bad',type:'promo',title:'Bad',url:'javascript:alert(1)'},
  {id:'archived',type:'other',url:'https://example.org'}]};
  const catalog=normalizeCatalog(raw);
- assert.deepEqual(catalog.campaigns.map(x=>x.id),['offer']);
+ assert.deepEqual(catalog.campaigns.map(x=>x.id),['offer','feature']);
+ assert.equal(catalog.campaigns[0].image,'/uploads/default.webp');
  assert.deepEqual(catalog.trackedLinks,[]);
  assert.equal(catalog.trackedAvailable,false);
  assert.equal(catalog.campaigns.some(x=>x.id==='classic'),false);
@@ -23,6 +24,7 @@ test('private bridge provides only enabled and non-archived tracked links',()=>{
  ]});
  assert.deepEqual(tracked.map(x=>x.id),['tracked-1']);
  assert.equal(tracked[0].type,'independent');
+ assert.equal(tracked[0].description,'','Removed LinKs categories must not be displayed');
 });
 test('visual proxy rejects untrusted paths and dynamic URLs',()=>{
  assert.equal(safeImageRef('/uploads/aaa.png'),true);

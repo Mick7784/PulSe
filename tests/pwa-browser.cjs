@@ -19,6 +19,7 @@ module.exports=async function(){
   if(path==='/api/pulse/link-manager')return json({version:1,items:[{id:'draft',name:'Lien de recette',url:'https://example.com',original_url:'https://example.com',revision:'test'}],partners:[],sources:[{id:'discord',name:'Discord',platform:'discord'}]});
   if(path==='/api/pulse/link-token')return json({url:'https://links.example/discord12',source_id:'discord'});
   if(path==='/api/pulse/story-link')return json({url:'https://links.example/test12345'});
+  if(path==='/api/pulse/today')return json({version:1,available:true,timezone:'Europe/Paris',date:'2026-10-30',yesterday_date:'2026-10-29',generated_at:'2026-10-30T12:00:00Z',scope:'all-clicks',comparison:'yesterday-full-day',analytics_enabled:true,today:0,yesterday:0,ranking_scope:'tracked-links',tracked_total:0,top_links:[],sources:[]});
   if(path==='/api/pulse/stats')return json({period:7,total:0,today:0,last7:0,stories:0,days:Array.from({length:7},(_,i)=>({date:'2026-10-'+(20+i),clicks:0}))});
   return new Response('{}',{status:404});
  }});

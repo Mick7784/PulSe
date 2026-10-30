@@ -37,12 +37,11 @@ module.exports=async function({page,context,api,fixture}){
  const insights=(await api('insights?days=7')).data;assert.equal(insights.available,true);assert.equal(insights.activeCampaigns,4);
  assert.equal(insights.topLinks[0].id,fixture.legacy.id);assert.equal(insights.topLinks[0].clicks,4);assert.equal(insights.sources.find(x=>x.platform==='discord').clicks,2);assert.equal(insights.sources.find(x=>x.platform==='youtube').clicks,1);
  await page.locator('#nav-stats').click();await page.locator('#refresh').click();await page.waitForFunction(()=>!document.getElementById('insights-content').hidden);assert.match(await page.locator('#insights-summary').textContent(),/4 clics/);
- await page.getByRole('button',{name:'30 jours',exact:true}).click();await page.waitForFunction(()=>document.getElementById('insights-status').textContent==='LinKs · 30 jours');assert.equal((await api('insights?days=30')).data.trackedTotal,4);
- // A failed period refresh hides the old ranking rather than leaving stale figures.
- await page.route('**/api/insights?days=7',route=>route.abort());await page.getByRole('button',{name:'7 jours',exact:true}).click();await page.waitForFunction(()=>document.getElementById('insights-status').textContent.includes('indisponible'));assert.equal(await page.locator('#insights-content').isVisible(),false);await page.unroute('**/api/insights?days=7');
+ const today=(await api('today')).data;assert.equal(today.available,true);assert.equal(today.trackedTotal,4);assert.equal(today.topLinks[0].clicks,4);assert.ok(today.today>=today.trackedTotal);
+ await page.route('**/api/today',route=>route.abort());await page.locator('#refresh').click();await page.waitForFunction(()=>document.getElementById('insights-status').textContent.includes('indisponible'));assert.equal(await page.locator('#insights-content').isVisible(),false);await page.unroute('**/api/today');
  await page.locator('#refresh').click();await page.waitForFunction(()=>!document.getElementById('insights-content').hidden);
  // Explicitly accept replacement of a text draft when using a dashboard shortcut.
- await page.locator('#insights-links button').first().click();await page.locator('#link-share-panel').waitFor({state:'visible'});assert.equal(await page.locator('#link-share-title').textContent(),'Lien historique');
+ await page.locator('#insights-content summary').click();await page.locator('#insights-links button').first().click();await page.locator('#link-share-panel').waitFor({state:'visible'});assert.equal(await page.locator('#link-share-title').textContent(),'Lien historique');
  await generate('discord');await page.locator('#publication-text').fill('À découvrir sur Discord');
  for(const width of [320,390,480]){await page.setViewportSize({width,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true)}
  await page.setViewportSize({width:390,height:844});

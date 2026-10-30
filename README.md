@@ -2,7 +2,7 @@
 
 Application mobile de gestion des liens suivis, de préparation de publications et de consultation des clics LinKs. Docker indépendant ; aucune commande de déploiement automatique. Base V1 récupérée intégralement depuis le Compose Dockhand fourni par le propriétaire, puis versionnée sur une branche distincte.
 
-**Release V1.1.3 préparée :** refonte mobile et fonctions PulSe/LinKs intégrées ; la publication est distincte du déploiement sur le VPS. HTTP Basic reste actif tant que l'accès privé Pangolin n'est pas validé. Voir [le bilan de validation finale et les prérequis de livraison](docs/VALIDATION-FINALE.md). Aucun déploiement VPS ni retrait de Basic n’est autorisé par ce bilan.
+**Release V1.1.4 préparée :** refonte mobile et fonctions PulSe/LinKs intégrées ; la publication est distincte du déploiement sur le VPS. HTTP Basic reste actif tant que l'accès privé Pangolin n'est pas validé. Voir [le bilan de validation finale et les prérequis de livraison](docs/VALIDATION-FINALE.md). Aucun déploiement VPS ni retrait de Basic n’est autorisé par ce bilan.
 
 ## Interface
 
@@ -66,7 +66,7 @@ Les métadonnées proviennent de `/latest-video.json` de LinKs ; aucune deuxièm
 Conserver les valeurs existantes dans Dockhand, jamais dans Git :
 
 ```dotenv
-PULSE_VERSION=1.1.3
+PULSE_VERSION=1.1.4
 PANGOLIN_PROXY_NETWORK=pangolin
 PULSE_TEST_USER=
 PULSE_TEST_PASSWORD=
@@ -77,7 +77,7 @@ PULSE_BRIDGE_TOKEN=
 
 Le Compose conserve `name: links-pulse-test`, l’alias `pulse-story-spike-test`, le réseau externe `pangolin`, le port lié à 127.0.0.1 et `/healthz`. Pangolin termine HTTPS et conserve sa cible `http://pulse-story-spike-test:4173` ; ne pas modifier LinKs, son volume ou ses ressources réseau pour déployer PulSe. Le service et le nom de stack existants doivent rester identiques pour éviter deux conteneurs utilisant le même alias.
 
-`compose.yaml` utilise désormais l’image publique versionnée `ghcr.io/mick7784/links-pulse:${PULSE_VERSION:-1.1.3}`, sans contexte Git ni compilation locale. `pull_policy: always` télécharge l’image lors d’un redéploiement. Le vrai `.env` de Dockhand conserve la version actuellement validée et les secrets préexistants ; `.env.example` n’est qu’un modèle et ne contient aucun secret.
+`compose.yaml` utilise désormais l’image publique versionnée `ghcr.io/mick7784/links-pulse:${PULSE_VERSION:-1.1.4}`, sans contexte Git ni compilation locale. `pull_policy: always` télécharge l’image lors d’un redéploiement. Le vrai `.env` de Dockhand conserve la version actuellement validée et les secrets préexistants ; `.env.example` n’est qu’un modèle et ne contient aucun secret.
 
 Avant toute mise à jour : conserver le Compose et l’image V1, les variables, la cible Pangolin et la possibilité de reconstruire/revenir à la V1. LinKs V1.316 est publiée : s’assurer qu’elle est aussi *déployée* avant de tester les liens YouTube suivis et les statistiques 30 jours. Une fusion de PR ne déploie jamais PulSe. Depuis la V1.1.1, le pipeline de release publie une image GHCR versionnée depuis `main` après validation ; le déploiement reste manuel dans Dockhand.
 
@@ -119,3 +119,14 @@ Le manifeste, les icônes, la page hors-ligne et le service worker sont accessib
 La CI vérifie le manifeste via l'API Chromium et le service worker, mais le statut « application installée » ne peut être confirmé qu'après un test sur le vrai Samsung, depuis l'URL HTTPS Pangolin et hors navigateur intégré à une autre application. Si Chrome n'offre que « raccourci », vérifier le certificat HTTPS, l'accès HTTP 200 au manifeste/icônes depuis le réseau privé autorisé et les éventuelles protections supplémentaires du proxy.
 
 Ce paragraphe décrit la release historique V1.1.2, pas la refonte de cette branche. Pour une livraison future, choisir uniquement une image publiée après autorisation ; conserver le tag et le digest réellement en service pour le retour arrière. La charte mobile est intégrée à cette branche, sans nouvelle release à ce stade.
+
+
+## V1.1.4 — mobile compact et statistiques du jour
+
+Navigation Stories → Liens → Stats ; header et barre basse fixes. Une ligne par lien, actions Modifier/Partager ; le choix pour une Story reste distinct. Les brouillons et médias restent en mémoire.
+
+LinKs **V1.329 minimum** : `/api/pulse/today` est privé, en lecture seule, sur les compteurs existants. KPI : tous les clics (page, campagnes, liens suivis). Classements : liens suivis uniquement, inclus dans ce total. Comparaison avec **hier, journée complète** ; aucune granularité horaire disponible. Fuseau Europe/Paris ; un autre fuseau est signalé comme incompatible, sans conversion fictive ni changement de configuration.
+
+`PULSE_VERSION=1.1.4` force cette release ; `PULSE_VERSION=latest` choisit la dernière stable lors du prochain **pull/recreate explicite**. Aucune mise à jour continue n'est promise. Les tags numéroté et latest ont le même digest AMD64/ARM64. La CI bloque un ancien commit et ne reconstruit pas un tag existant ; une reprise vérifie les labels de révision des deux architectures avant promotion. Le candidat privé conserve son exigence d'image explicitement vérifiée.
+
+Retour arrière, lors d'un déploiement séparément autorisé : remettre `PULSE_VERSION=1.1.3`, puis pull/recreate PulSe. Conserver LinKs V1.329 (API additive), ses volumes, secrets, tokens et HTTP Basic. Aucun déploiement ni changement d'infrastructure n'est effectué par cette release.

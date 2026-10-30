@@ -15,6 +15,7 @@ const close=s=>new Promise(r=>s.close(r));
   if(u.pathname==='/api/public-config')return json({links:[{id:'offer',type:'promo',title:'Offre de test · capteur connecté',url:'https://partner.example/offer',image:'/uploads/test.png',description:'Cette description ne doit pas apparaître en ligne'}]});
   if(u.pathname==='/latest-video.json')return json({title:'Vidéo de test · une maison connectée plus simple',url:'https://youtu.be/'+id,thumbnail:'https://i.ytimg.com/vi/'+id+'/hqdefault.jpg',published:'2026-10-01T12:00:00Z'});
   if(u.pathname==='/api/pulse/links')return json({links:Array.from({length:35},(_,i)=>({id:'link'+i,name:'Lien suivi '+i,url:'https://partner.example/'+i,enabled:true,archived:false}))});
+  if(u.pathname==='/api/pulse/today'){if(failStats){res.statusCode=503;return json({})}return json({version:1,available:true,timezone:'Europe/Paris',date:'2026-10-30',yesterday_date:'2026-10-29',generated_at:'2026-10-30T12:00:00Z',scope:'all-clicks',comparison:'yesterday-full-day',analytics_enabled:true,today:6,yesterday:9,ranking_scope:'tracked-links',tracked_total:0,top_links:[],sources:[]})}
   if(u.pathname==='/api/pulse/stats'){if(failStats){res.statusCode=503;return json({})}const n=Number(u.searchParams.get('days')||7),days=Array.from({length:n},(_,i)=>({date:new Date(Date.UTC(2026,9,24-n+i)).toISOString().slice(0,10),clicks:i}));return json({period:n,total:days.reduce((s,d)=>s+d.clicks,0),today:n-1,last7:days.slice(-7).reduce((s,d)=>s+d.clicks,0),stories:3,days})}
   if(u.pathname==='/api/pulse/story-link'){if(failVideoLink){res.statusCode=400;return json({error:'Type PulSe invalide'})}return json({url:'https://links.example/a12345678'})}
   if(u.pathname==='/uploads/test.png'){res.setHeader('Content-Type','image/png');return res.end(png)}
@@ -57,16 +58,15 @@ const close=s=>new Promise(r=>s.close(r));
   assert.equal(await page.locator('#nav-stats').getAttribute('aria-current'),'page');
   assert.equal(await page.locator('#story-panel').isVisible(),false);assert.equal(await page.locator('#stat-today').isVisible(),true);
   assert.equal(await page.getByText('Photo personnelle',{exact:true}).count(),0);assert.equal(await page.getByText('Stories déclarées',{exact:true}).count(),0);
-  await page.getByRole('button',{name:'30 jours',exact:true}).click();await page.waitForFunction(()=>document.getElementById('stat-today').textContent==='29');
-  assert.equal(await page.locator('#stat-period').textContent(),'435');assert.equal(await page.locator('#daily-values tr').count(),30);assert.equal(await page.locator('#chart rect.bar').count(),30);
-  const graph=await page.locator('#chart').evaluate(el=>({scroll:el.scrollWidth,width:el.clientWidth,font:parseFloat(getComputedStyle(el.querySelector('.bar-value')).fontSize)*el.querySelector('svg').getScreenCTM().a}));assert.ok(graph.scroll>graph.width);assert.ok(graph.font>=14.5);await page.locator('.chart-hit').last().focus();assert.match(await page.locator('#chart-selection').textContent(),/29 clics/);
-  await page.screenshot({path:resolve(process.env.PULSE_SCREENSHOT_DIR||resolve(__dirname,'../../screenshots'),'pulse-mobile-30-days.png'),fullPage:true});
+  assert.deepEqual(await page.locator('.bottom-nav button').allTextContents(),['Stories','Liens','Stats']);
+  assert.equal(await page.locator('[data-period]').count(),0);
+  assert.match(await page.locator('#today-comparison').textContent(),/9 hier, journée complète/);
   failStats=true;await page.getByRole('button',{name:'Actualiser les données'}).click();await page.waitForFunction(()=>document.getElementById('chart-caption').textContent.includes('ne répond pas'));
-  assert.equal(await page.locator('#stat-today').textContent(),'—');assert.equal(await page.locator('#chart rect').count(),0);
-  failStats=false;await page.getByRole('button',{name:'7 jours',exact:true}).click();await page.waitForFunction(()=>document.getElementById('stat-today').textContent==='6');
+  assert.equal(await page.locator('#stat-today').textContent(),'—');assert.equal(await page.locator('.today-bar').count(),0);
+  failStats=false;await page.locator('#refresh').click();await page.waitForFunction(()=>document.getElementById('stat-today').textContent==='6');
   const out=process.env.PULSE_SCREENSHOT_DIR||resolve(__dirname,'../../screenshots');await mkdir(out,{recursive:true});
-  const weekFont=await page.locator('#chart .bar-value').first().evaluate(el=>parseFloat(getComputedStyle(el).fontSize)*el.ownerSVGElement.getScreenCTM().a);assert.ok(weekFont>=14.5);await page.screenshot({path:resolve(out,'pulse-mobile-dashboard.png'),fullPage:true});
-  await page.getByRole('button',{name:'Préparer une Story',exact:true}).click();assert.equal(await page.locator('#tracked-links button').count(),35);
+  await page.screenshot({path:resolve(out,'pulse-mobile-dashboard.png'),fullPage:true});
+  await page.locator('#nav-stories').click();assert.equal(await page.locator('#tracked-links button').count(),35);
   assert.equal(await page.locator('#nav-stories').getAttribute('aria-current'),'page');
   assert.equal(await page.locator('#stats-view').isVisible(),false);
   assert.equal(await page.locator('#campaigns small').count(),0);assert.equal(await page.locator('#tracked-links .chain-icon').count(),35);
@@ -104,7 +104,7 @@ const close=s=>new Promise(r=>s.close(r));
   assert.equal(await page.locator('#publication-check').isDisabled(),true);assert.equal(await page.locator('#confirm-publication').isDisabled(),true);
   await page.evaluate(()=>window.__cancelShare=false);await page.locator('#share').click();await page.waitForFunction(()=>!document.getElementById('publication-check').disabled);
   assert.equal(await page.locator('#confirm-publication').isDisabled(),true);assert.equal(await page.locator('#publication-receipt').textContent(),'');
-  await page.locator('#publication-check').check();await page.locator('#confirm-publication').click();assert.match(await page.locator('#publication-receipt').textContent(),/déclarée par vous/);assert.equal(await page.locator('#stat-story').textContent(),'3');
+  await page.locator('#publication-check').check();await page.locator('#confirm-publication').click();assert.match(await page.locator('#publication-receipt').textContent(),/déclarée par vous/);assert.equal(await page.locator('#stat-today').textContent(),'6');
   // Rapid selections may not let an earlier asynchronous image overwrite the new choice.
   await page.route('**/api/story-link',async route=>{const data=route.request().postDataJSON();if(data.type==='youtube')await new Promise(r=>setTimeout(r,200));await route.fulfill({json:{url:'https://links.example/'+(data.type==='youtube'?'video1234':'offer1234'),tracked:true}})});
   await page.locator('#latest-video button').click();assert.equal(await page.locator('#story-media').isEnabled(),true);await page.locator('#campaigns button').click();await page.waitForFunction(()=>document.getElementById('story-link').value.endsWith('offer1234')&&!document.getElementById('preview').hidden);await new Promise(r=>setTimeout(r,250));assert.match(await page.locator('#story-link').inputValue(),/offer1234$/);
@@ -125,7 +125,7 @@ const close=s=>new Promise(r=>s.close(r));
   // The worker must never cache private API data or media.
   await page.evaluate(()=>navigator.serviceWorker.ready);const cached=await page.evaluate(async()=>{const results=[];for(const key of await caches.keys()){for(const r of await(await caches.open(key)).keys())results.push(new URL(r.url).pathname)}return results});assert.ok(cached.length>0);assert.equal(cached.some(p=>p.startsWith('/api/')),false);
   assert.deepEqual(errors,[]);await context.close();
-  console.log('PASS: publication steps, legacy bridge diagnostic/retry, explicit manual confirmation, 15px mobile chart values, 30-day scrolling/touch detail, 1080x1920, photo/video and races, activation, cancellation, clipboard fallback, PWA and private cache exclusion. Fixtures only; no physical Samsung test.');
+  console.log('PASS: publication steps, legacy bridge diagnostic/retry, explicit manual confirmation, 15px mobile chart values, daily comparison, 1080x1920, photo/video and races, activation, cancellation, clipboard fallback, PWA and private cache exclusion. Fixtures only; no physical Samsung test.');
  }finally{if(browser)await browser.close();await close(pulse);await close(fake)}
-})().then(()=>require('./pwa-browser.cjs')()).catch(e=>{console.error(e);process.exitCode=1});
+})().then(()=>require('./pwa-browser.cjs')()).then(()=>require('./compact-browser.cjs')()).catch(e=>{console.error(e);process.exitCode=1});
 

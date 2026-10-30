@@ -81,7 +81,7 @@ export function createPulseServer({ user='',password='', linksURL='http://domoti
   }
   const handler=async (req,res)=>{
     let route;try{route=new URL(req.url,'http://localhost')}catch{return responseJson(res,400,{error:'Adresse invalide.'})}
-    if(req.method==='GET'&&route.pathname==='/healthz')return responseJson(res,200,{status:'ok',version:'1.1.2'});
+    if(req.method==='GET'&&route.pathname==='/healthz')return responseJson(res,200,{status:'ok',version:'1.1.3'});
     if(user && !(req.method==='GET'&&PUBLIC_PWA.has(route.pathname)) && !sameSecret(req.headers.authorization,authValue)) {
       res.writeHead(401,{...HEADERS,'WWW-Authenticate':'Basic realm="PulSe", charset="UTF-8"'});return res.end('Connexion requise.');
     }
@@ -185,7 +185,7 @@ export async function startFromEnvironment(env=process.env) {
   const server=createPulseServer({user:env.PULSE_TEST_USER||'',password:env.PULSE_TEST_PASSWORD||'',linksURL:env.LINKS_PUBLIC_URL||'http://domotik-links:8080',bridgeToken:env.PULSE_BRIDGE_TOKEN||'',bridgeURL:env.LINKS_BRIDGE_URL||''});
   const host=env.PULSE_HOST||'127.0.0.1',port=Number(env.PULSE_PORT||4173);
   await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(port,host,resolve)});
-  console.log(`PulSe V1.1.2 : HTTP sur ${host}:${port}`);
+  console.log(`PulSe V1.1.3 : HTTP sur ${host}:${port}`);
   return server;
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href)startFromEnvironment().catch(e=>{console.error('Démarrage refusé :',e.message);process.exitCode=1});

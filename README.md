@@ -4,10 +4,10 @@ Application mobile de préparation de Stories et de consultation des clics LinKs
 
 ## Interface
 
-- En-tête : **PulSe en texte uniquement**. Pas de symbole de marque ni de badge de version. Les icônes d’installation reprennent uniquement ce même texte. Version au footer.
-- Interface bleu/navy responsive ; accordéon « Préparer une Story » fermé par défaut, statistiques visibles dessous.
+- En-tête : logo officiel PulSe, recadré à partir du fichier fourni sans modification des formes ou proportions. Les icônes d’installation restent celles de V1.1.2 jusqu’à la phase PWA.
+- Interface exclusivement mobile (320–480 px), surfaces et hiérarchie LinKs, accents cyan/violet/rose. Navigation basse Statistiques / Stories ; le brouillon et la position de lecture sont conservés lors du changement de vue, dans la page en cours.
 - Dernière vidéo YouTube de la source LinKs existante : titre, miniature, préparation d’un lien court propre à cette vidéo et d’une image verticale 1080 × 1920 avec fond flou.
-- Offres actives : petite image et titre ; liens privés suivis : maillon, nom, catégorie, recherche sur toute la liste fournie. Liens classiques exclus.
+- Offres actives : petite image et titre ; liens privés suivis : maillon, nom et recherche sur toute la liste fournie. Liens classiques exclus.
 - L’éditeur apparaît immédiatement sous le contenu choisi. Photo/vidéo du téléphone possible pour ce contenu ; aucun bloc « Photo personnelle » séparé. Les photos restent locales, les images sont préparées en JPEG 1080 × 1920 sans recadrer leur contenu ; les vidéos sont partagées dans leur format original (sans promesse de conversion ou de compatibilité Instagram).
 - Statistiques 7/30 jours : clics du jour, total de période, clics Story inclus dans ce total, graphique daté/chiffré et tableau accessible. Pas de « Stories déclarées », pas de métrique « Offres actives » dupliquée. Pas de top publications : attribution par publication non démontrée.
 - Installation PWA : invite navigateur quand disponible, instructions Safari/iOS ou Android sinon, état installé en mode autonome et sur événement `appinstalled`. Une installation antérieure ne peut pas être détectée universellement depuis tous les onglets et navigateurs.
@@ -65,7 +65,7 @@ En cas de statistiques incomplètes, de période incompatible ou d’erreur : va
 
 `node --test tests/*.test.mjs` : catalogue, authentification, restrictions du proxy, contrats 7/30 jours et vidéo, absence de repli non suivi, instructions PWA. Aucun paquet de production requis.
 
-`NODE_PATH=<dossier node_modules contenant playwright> node tests/browser.cjs` : parcours mobile/desktop avec serveurs et données de test locaux. `CHROMIUM_PATH` facultatif pour utiliser un Chrome installé ; `PULSE_SCREENSHOT_DIR` choisit le dossier des captures. La CI installe le navigateur de test et construit/vérifie une image Docker isolée. Sur `main`, après validation, elle publie sur GHCR et crée une release GitHub si cette version n’existe pas déjà ; aucun déploiement VPS n’est exécuté.
+`NODE_PATH=<dossier node_modules contenant playwright> node tests/browser.cjs` : parcours mobile de 320 à 480 px avec serveurs et données de test locaux, conservation du brouillon entre les vues, photo/vidéo, erreurs, partage, copie et installation. Un profil navigateur isolé permet les contrôles d’installation sans le mode privé. `CHROMIUM_PATH` facultatif pour utiliser un Chrome installé ; `PULSE_SCREENSHOT_DIR` choisit le dossier des captures. La CI installe le navigateur de test et construit/vérifie une image Docker isolée. Sur `main`, après validation, elle publie sur GHCR et crée une release GitHub si cette version n’existe pas déjà ; aucun déploiement VPS n’est exécuté.
 
 Voir [la recette physique](docs/RECETTE.md) et [les changements](docs/V1.1.md). Un test de navigateur simulant Web Share ne prouve ni l’ouverture effective de Story ni la publication sur Samsung.
 

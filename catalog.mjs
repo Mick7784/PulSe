@@ -28,7 +28,7 @@ export function normalizeTrackedLinks(raw) {
     const id=clamp(item.id,100),title=clamp(item.name,180),url=httpURL(item.url);
     if(!id||!title||!url||seen.has(id))continue;
     seen.add(id);
-    result.push({id,title,description:clamp(item.category,180),url,image:'',type:'independent',promoCode:''});
+    result.push({id,title,description:'',url,image:'',type:'independent',promoCode:''});
   }
   return result;
 }

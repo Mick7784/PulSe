@@ -9,12 +9,29 @@ async function api(path,options={}){const r=await fetch(path,{cache:'no-store',.
 function canShareFile(file){try{return isSecureContext&&!!navigator.share&&!!navigator.canShare?.({files:[file]})}catch{return false}}
 function clearPrepared(){prepared=null;mediaFile=null;if(objectURL)URL.revokeObjectURL(objectURL);objectURL=null;flow={copied:false,shared:false,downloaded:false,published:false};$('preview').hidden=true;$('video-preview').hidden=true;$('video-preview').pause();$('video-preview').removeAttribute('src');$('story-link').value='';$('media-name').textContent='';$('manual-copy').hidden=true;$('retry-link').hidden=true;$('publication-check').checked=false;$('publication-receipt').textContent='';syncDraft()}
 function syncDraft(){const url=selected?.link||'';prepared=mediaFile&&url?{file:mediaFile,url}:null;$('story-link').value=url;$('copy').disabled=!url;$('share').disabled=!prepared||!flow.copied||!canShareFile(mediaFile);$('download').hidden=!mediaFile;
+ $('draft-dot').hidden=!selected||flow.published;
  const states={media:!!mediaFile,copy:flow.copied,share:flow.shared||flow.downloaded,publish:flow.published};
  for(const [name,complete]of Object.entries(states))$('step-'+name).dataset.state=complete?'complete':'pending';
  $('media-state').textContent=mediaFile?'Visuel prêt':'Choix / préparation';$('copy-state').textContent=flow.copied?'Lien copié':url?'Lien prêt':'Lien en attente';$('share-state').textContent=flow.shared?'Partage effectué':flow.downloaded?'Import manuel à faire':'Après copie du lien';$('publish-state').textContent=flow.published?'Déclaration enregistrée':'À faire dans Instagram';
  $('publication-state').textContent=flow.published?'Terminée sur cet appareil':prepared?'Prête à publier':mediaFile?'Visuel prêt · lien en attente':'En préparation';const canFinish=!!prepared&&flow.copied&&states.share;$('publication-check').disabled=!canFinish||flow.published;$('confirm-publication').disabled=!canFinish||!$('publication-check').checked||flow.published;
 }
-$('story-toggle').onclick=()=>{const open=$('story-toggle').getAttribute('aria-expanded')!=='true';$('story-toggle').setAttribute('aria-expanded',String(open));$('story-panel').hidden=!open};
+let activeView='stats';
+const viewScroll={stats:0,stories:0};
+function showView(view){
+ if(view===activeView)return;
+ viewScroll[activeView]=window.scrollY;activeView=view;
+ for(const name of ['stats','stories']){
+  $(name+'-view').hidden=name!==view;
+  const button=$('nav-'+name);if(name===view)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');
+ }
+ $('story-panel').hidden=view!=='stories';$('story-toggle').setAttribute('aria-expanded',String(view==='stories'));
+ document.title='PulSe — '+(view==='stats'?'Statistiques':'Stories');
+ document.querySelector('.skip-link').href='#view-'+view+'-title';
+ $('view-'+view+'-title').focus({preventScroll:true});
+ window.scrollTo({top:viewScroll[view],behavior:'instant'});
+}
+$('story-toggle').onclick=()=>showView('stories');
+$('nav-stats').onclick=()=>showView('stats');$('nav-stories').onclick=()=>showView('stories');
 function chain(){const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('aria-hidden','true');svg.classList.add('chain-icon');const p=document.createElementNS(svg.namespaceURI,'path');p.setAttribute('d','M10 13a5 5 0 0 0 7 .2l3-3a5 5 0 0 0-7-7l-2 2M14 11a5 5 0 0 0-7-.2l-3 3a5 5 0 0 0 7 7l2-2');p.setAttribute('fill','none');p.setAttribute('stroke','currentColor');p.setAttribute('stroke-width','1.8');svg.append(p);return svg}
 const itemKey=item=>item.type+':'+item.id;
 function renderList(name,items){const root=$(name);root.replaceChildren();if(!items.length){root.append(node('p','empty',name==='campaigns'?'Aucune offre active.':catalog.trackedAvailable?'Aucun lien correspondant.':'Liens suivis momentanément indisponibles.'));return}
@@ -54,7 +71,7 @@ function updateChart(days){lastChartDays=days;const root=$('chart');chartWidth=r
  days.forEach((d,i)=>{const h=plot*d.clicks/max,x=left+i*step+6,cx=x+(step-12)/2,label=dateLabel(d.date)+' : '+number.format(d.clicks)+' clics',bar=svgNode('rect',{x,y:bottom-h,width:Math.max(8,step-12),height:h,rx:4,class:'bar',fill:'url(#pulse-click-gradient)'});svg.append(bar,svgNode('text',{x:cx,y:bottom-h-10,'text-anchor':'middle',class:'bar-value'},number.format(d.clicks)),svgNode('text',{x:cx,y:bottom+25,'text-anchor':'middle',class:'day-label'},dateLabel(d.date)));
  const hit=svgNode('rect',{x:left+i*step,y:20,width:step,height:bottom-15,fill:'transparent',class:'chart-hit',tabindex:0,role:'button','aria-label':label});hit.append(svgNode('title',{},label));const show=()=>{$('chart-selection').textContent=label};hit.onclick=show;hit.onfocus=show;hit.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();show()}};svg.append(hit);const tr=node('tr');tr.append(node('td','',dateLabel(d.date)),node('td','',number.format(d.clicks)));$('daily-values').append(tr)});root.append(svg)
 }
-new ResizeObserver(()=>{if(lastChartDays.length&&chartWidth!==$('chart').clientWidth)updateChart(lastChartDays)}).observe($('chart'));
+new ResizeObserver(()=>{if(lastChartDays.length&&$('chart').clientWidth>0&&chartWidth!==$('chart').clientWidth)updateChart(lastChartDays)}).observe($('chart'));
 function resetStats(reason){lastChartDays=[];for(const id of ['stat-today','stat-period','stat-story'])$(id).textContent='—';$('chart-caption').textContent=reason;$('chart').replaceChildren(node('p','empty',reason));$('daily-details').hidden=true;$('daily-values').replaceChildren();$('chart-help').hidden=true;$('chart-selection').textContent=''}
 async function refreshStats(){const ticket=++statsRevision,requested=period;resetStats('Chargement…');try{const s=await api('/api/stats?days='+requested);if(ticket!==statsRevision)return;if(!s.available){resetStats(s.reason||'Statistiques indisponibles');return}$('stat-today').textContent=number.format(s.today);$('stat-period').textContent=number.format(s.total);$('stat-story').textContent=number.format(s.stories);$('chart-caption').textContent='LinKs · '+requested+' jours';updateChart(s.days)}catch{if(ticket===statsRevision)resetStats('Statistiques indisponibles')}}
 for(const b of document.querySelectorAll('[data-period]'))b.onclick=()=>{period=Number(b.dataset.period);for(const p of document.querySelectorAll('[data-period]'))p.setAttribute('aria-pressed',String(p===b));$('period-label').textContent='Clics sur '+period+' jours';refreshStats()};

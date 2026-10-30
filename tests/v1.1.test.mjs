@@ -74,7 +74,7 @@ test('PWA installation resources are available without credentials while the das
     assert.deepEqual(manifest.icons.map(icon=>icon.sizes),['192x192','512x512']);
    }
   }
-  for(const path of ['/','/index.html','/app.js','/api/catalog','/api/stats','/api/visual']){
+  for(const path of ['/','/index.html','/app.js','/brand-pulse.png','/api/catalog','/api/stats','/api/visual']){
    assert.equal((await fetch(base+path)).status,401,'authenticated route: '+path);
   }
   const html=await(await fetch(base+'/',{headers:{Authorization:auth}})).text();

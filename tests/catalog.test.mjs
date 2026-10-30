@@ -23,6 +23,7 @@ test('private bridge provides only enabled and non-archived tracked links',()=>{
  ]});
  assert.deepEqual(tracked.map(x=>x.id),['tracked-1']);
  assert.equal(tracked[0].type,'independent');
+ assert.equal(tracked[0].description,'','Removed LinKs categories must not be displayed');
 });
 test('visual proxy rejects untrusted paths and dynamic URLs',()=>{
  assert.equal(safeImageRef('/uploads/aaa.png'),true);

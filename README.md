@@ -2,7 +2,7 @@
 
 Application mobile de gestion des liens suivis, de préparation de publications et de consultation des clics LinKs. Docker indépendant ; aucune commande de déploiement automatique. Base V1 récupérée intégralement depuis le Compose Dockhand fourni par le propriétaire, puis versionnée sur une branche distincte.
 
-**Branche de développement non publiée.** La version technique reste `1.1.2` jusqu’à une autorisation de release distincte ; l’image publiée de ce nom ne contient pas cette refonte. Voir [le bilan de validation finale et les prérequis de livraison](docs/VALIDATION-FINALE.md). Aucun déploiement VPS ni retrait de Basic n’est autorisé par ce bilan.
+**Release V1.1.3 préparée :** refonte mobile et fonctions PulSe/LinKs intégrées ; la publication est distincte du déploiement sur le VPS. HTTP Basic reste actif tant que l'accès privé Pangolin n'est pas validé. Voir [le bilan de validation finale et les prérequis de livraison](docs/VALIDATION-FINALE.md). Aucun déploiement VPS ni retrait de Basic n’est autorisé par ce bilan.
 
 ## Interface
 
@@ -66,7 +66,7 @@ Les métadonnées proviennent de `/latest-video.json` de LinKs ; aucune deuxièm
 Conserver les valeurs existantes dans Dockhand, jamais dans Git :
 
 ```dotenv
-PULSE_VERSION=1.1.2
+PULSE_VERSION=1.1.3
 PANGOLIN_PROXY_NETWORK=pangolin
 PULSE_TEST_USER=
 PULSE_TEST_PASSWORD=
@@ -77,7 +77,7 @@ PULSE_BRIDGE_TOKEN=
 
 Le Compose conserve `name: links-pulse-test`, l’alias `pulse-story-spike-test`, le réseau externe `pangolin`, le port lié à 127.0.0.1 et `/healthz`. Pangolin termine HTTPS et conserve sa cible `http://pulse-story-spike-test:4173` ; ne pas modifier LinKs, son volume ou ses ressources réseau pour déployer PulSe. Le service et le nom de stack existants doivent rester identiques pour éviter deux conteneurs utilisant le même alias.
 
-`compose.yaml` utilise désormais l’image publique versionnée `ghcr.io/mick7784/links-pulse:${PULSE_VERSION:-1.1.2}`, sans contexte Git ni compilation locale. `pull_policy: always` télécharge l’image lors d’un redéploiement. Le vrai `.env` de Dockhand conserve la version actuellement validée et les secrets préexistants ; `.env.example` n’est qu’un modèle et ne contient aucun secret.
+`compose.yaml` utilise désormais l’image publique versionnée `ghcr.io/mick7784/links-pulse:${PULSE_VERSION:-1.1.3}`, sans contexte Git ni compilation locale. `pull_policy: always` télécharge l’image lors d’un redéploiement. Le vrai `.env` de Dockhand conserve la version actuellement validée et les secrets préexistants ; `.env.example` n’est qu’un modèle et ne contient aucun secret.
 
 Avant toute mise à jour : conserver le Compose et l’image V1, les variables, la cible Pangolin et la possibilité de reconstruire/revenir à la V1. LinKs V1.316 est publiée : s’assurer qu’elle est aussi *déployée* avant de tester les liens YouTube suivis et les statistiques 30 jours. Une fusion de PR ne déploie jamais PulSe. Depuis la V1.1.1, le pipeline de release publie une image GHCR versionnée depuis `main` après validation ; le déploiement reste manuel dans Dockhand.
 

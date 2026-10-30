@@ -11,7 +11,7 @@ Audit du 30 octobre 2026. Branche `feat/pulse-refonte-mobile`, ensemble des phas
 - Configuration privée candidate de phase 4 inchangée. Bearer côté serveur, API administratives non exposées par PulSe, cache limité aux ressources publiques de la PWA.
 - Correction finale : le repère existant de l'onglet Liens indique aussi un texte de publication en cours, y compris en changeant de vue, puis disparaît après déclaration. Testé dans le parcours réel ; marqueur de mise à jour `pwa8-1`.
 
-LinKs requis : `056179d4720af70df4298c2858149ae1cfb31198`, commit d'intégration de [LinKs #55](https://github.com/Mick7784/LinKs/pull/55), épinglé par son SHA complet dans la CI PulSe. Base validée V1.327 : `079b2987df71ebd332745d80df423ed42674c042`. La version V1.327 seule ne fournit pas les nouvelles routes. Les versions techniques et le Compose restent à `1.1.2` : **l'image publiée 1.1.2 ne contient pas cette refonte**. Choisir et publier la future version seulement après accord distinct.
+LinKs requis : `056179d4720af70df4298c2858149ae1cfb31198`, commit d'intégration de [LinKs #55](https://github.com/Mick7784/LinKs/pull/55), épinglé par son SHA complet dans la CI PulSe. Base validée V1.327 : `079b2987df71ebd332745d80df423ed42674c042`. La version V1.327 seule ne fournit pas les nouvelles routes. La version de release préparée est **1.1.3** (code, image Compose, notes de publication). L'image historique **1.1.2** ne contient pas cette refonte. La publication est autorisée séparément de tout déploiement VPS ; l'accès privé Pangolin et les tests physiques Samsung restent à valider.
 
 ## Preuves et limites des tests
 

@@ -42,7 +42,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: Mick7784/LinKs
-          ref: dfc67c4f2c36464a7e4b27f0c41f4d7d54f44c16
+          ref: 056179d4720af70df4298c2858149ae1cfb31198
           path: links-engine
           persist-credentials: false
       - name: Real LinKs and PulSe mobile integration

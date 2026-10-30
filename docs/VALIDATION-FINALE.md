@@ -11,7 +11,7 @@ Audit du 30 octobre 2026. Branche `feat/pulse-refonte-mobile`, ensemble des phas
 - Configuration privée candidate de phase 4 inchangée. Bearer côté serveur, API administratives non exposées par PulSe, cache limité aux ressources publiques de la PWA.
 - Correction finale : le repère existant de l'onglet Liens indique aussi un texte de publication en cours, y compris en changeant de vue, puis disparaît après déclaration. Testé dans le parcours réel ; marqueur de mise à jour `pwa8-1`.
 
-LinKs requis : `dfc67c4f2c36464a7e4b27f0c41f4d7d54f44c16`, branche `feat/pulse-link-management`, épinglé dans la CI PulSe. Base validée V1.327 : `079b2987df71ebd332745d80df423ed42674c042`. La version V1.327 seule ne fournit pas les nouvelles routes. Les versions techniques et le Compose restent à `1.1.2` : **l'image publiée 1.1.2 ne contient pas cette refonte**. Choisir et publier la future version seulement après accord distinct.
+LinKs requis : `056179d4720af70df4298c2858149ae1cfb31198`, commit d'intégration de [LinKs #55](https://github.com/Mick7784/LinKs/pull/55), épinglé par son SHA complet dans la CI PulSe. Base validée V1.327 : `079b2987df71ebd332745d80df423ed42674c042`. La version V1.327 seule ne fournit pas les nouvelles routes. Les versions techniques et le Compose restent à `1.1.2` : **l'image publiée 1.1.2 ne contient pas cette refonte**. Choisir et publier la future version seulement après accord distinct.
 
 ## Preuves et limites des tests
 
@@ -29,11 +29,13 @@ Références antérieures au correctif final : [CI PulSe `3becc96`](https://gith
 
 Les appels natifs de copie/partage sont contrôlés par les tests navigateur. Aucune publication Instagram/YouTube/Discord réelle n'est effectuée. Le test Traefik utilise une cible LinKs de recette pour la frontière réseau ; il ne valide pas le VPN Pangolin réel. L'intégration métier utilise bien LinKs réel, séparément. Toutes les données sont temporaires ; aucun lien de production n'est visité.
 
-## Travail LinKs parallèle
+## Intégration LinKs commune
 
-La PR [LinKs #53](https://github.com/Mick7784/LinKs/pull/53), instantané `00a0bc489f20fa52fe4df1724d50c84c708115c6`, contient les titres automatiques et la création par lot (étapes 1–4). Elle est ouverte, non fusionnée et absente du moteur testé ici. PulSe ne duplique pas ces fonctions et n'expose pas leurs routes admin.
+La PR brouillon [LinKs #55](https://github.com/Mick7784/LinKs/pull/55) réunit #53 (`888e0212957a267be4d5d4d25f00c0a05eed172a`, titres, lots et vérification avant copie) et #54 (`dfc67c4f2c36464a7e4b27f0c41f4d7d54f44c16`, gestion PulSe et statistiques). Elle constitue la source commune à valider ; ne pas fusionner #53 et #54 séparément. Les conflits d'imports dans `scripts/analytics.py` et de modules dans `Dockerfile` sont résolus en conservant les deux apports. Le workflow conserve toutes les suites des deux branches.
 
-Une comparaison `git merge-tree --write-tree` sans fusion de branches ni modification du checkout signale deux conflits additifs : `Dockerfile` (copies de modules) et `scripts/analytics.py` (imports). Une intégration ultérieure devra conserver `pulse_manager`, `url_inspection` et `tracked_batch`, puis relancer les tests des deux chantiers et l'intégration PulSe. La fusion textuelle des autres fichiers ne prouve pas leur compatibilité d'exécution. Refaire cette vérification si la PR #53 évolue ; aucune anticipation de ses étapes futures.
+La [CI LinKs du commit intégré](https://github.com/Mick7784/LinKs/actions/runs/41095431599) est réussie : 307 exécutions Python (dont 49 pour `pulse_manager_test.py` et cinq nouvelles régressions croisées), 29 tests JavaScript, 27 parcours navigateur, démarrage Docker et images AMD64/ARM64. Les étapes de publication, réservation de version, tag et release sont ignorées. Les cinq régressions croisées couvrent les créations concurrentes lot/PulSe, la reprise d'une écriture dont la réponse est perdue, les éditions/titres concurrents, la conservation des données historiques et la séparation Bearer/admin.
+
+Les 16 tests Node PulSe et les deux suites navigateur (`browser.cjs`, `links-integration.cjs`, incluant Stories et multicanal) ont également réussi localement avec ce moteur intégré. La CI PulSe utilise désormais ce même SHA immuable et contrôle de nouveau l'ensemble, Docker et frontière privée compris. Aucun changement applicatif PulSe n'est nécessaire : pas de moteur métier dupliqué, d'interface modifiée, de catégories réintroduites ou de retrait de HTTP Basic. Les limites physiques et réseau ci-dessous restent applicables.
 
 ## Conditions restant à valider
 

@@ -41,23 +41,23 @@ jobs:
           NODE_PATH: ${{ runner.temp }}/pulse-browser/node_modules
           PULSE_SCREENSHOT_DIR: ${{ runner.temp }}/pulse-screenshots
         run: node tests/browser.cjs
-      - name: Check out the reviewed LinKs engine
+      - name: Read the immutable LinKs release lock
+        id: links
+        run: node -e "const fs=require('fs'),r=require('./tests/links-release.json');if(!/^[a-f0-9]{40}$/.test(r.revision))process.exit(1);fs.appendFileSync(process.env.GITHUB_OUTPUT,'revision='+r.revision+'\n')"
+      - name: Check out only the released LinKs fixture helper
         uses: actions/checkout@v4
         with:
           repository: Mick7784/LinKs
-          ref: af97374d6776367931c263932b89291a758924cb
+          ref: ${{ steps.links.outputs.revision }}
           path: links-engine
           persist-credentials: false
-      - name: Real LinKs and PulSe mobile integration
+      - name: Real released LinKs image, PulSe, SQLite and mobile integration
         env:
           NODE_PATH: ${{ runner.temp }}/pulse-browser/node_modules
           LINKS_REPO: ${{ github.workspace }}/links-engine
-          PYTHON_PATH: ${{ runner.temp }}/links-python/bin/python
+          LINKS_CONTAINER: '1'
           PULSE_SCREENSHOT_DIR: ${{ runner.temp }}/pulse-screenshots
-        run: |
-          python3 -m venv "$RUNNER_TEMP/links-python"
-          "$PYTHON_PATH" -m pip install Pillow
-          node tests/links-integration.cjs
+        run: node tests/links-integration.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

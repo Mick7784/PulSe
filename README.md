@@ -99,6 +99,8 @@ En cas de statistiques incomplètes, de période incompatible ou d’erreur : va
 
 Voir [la recette physique](docs/RECETTE.md) et [les changements](docs/V1.1.md). Un test de navigateur simulant Web Share ne prouve ni l’ouverture effective de Story ni la publication sur Samsung.
 
+La CI d'intégration utilise l'image LinKs publiée, verrouillée par digest et commit dans [`tests/links-release.json`](tests/links-release.json). Avec Docker disponible, `LINKS_CONTAINER=1 LINKS_REPO=<checkout du commit verrouillé> node tests/links-integration.cjs` télécharge cette image, vérifie sa version/révision et exécute son moteur Python dans un conteneur en lecture seule, avec SQLite et médias temporaires. Le checkout fournit uniquement le script générique de préparation des données ; aucun code applicatif de l'image n'est remplacé. Le mode local sans `LINKS_CONTAINER` reste disponible pour développer avec un checkout LinKs.
+
 
 ## Mise à jour par image GHCR
 

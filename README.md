@@ -2,7 +2,7 @@
 
 Application mobile de gestion des liens suivis, de préparation de publications et de consultation des clics LinKs. Docker indépendant ; aucune commande de déploiement automatique. Base V1 récupérée intégralement depuis le Compose Dockhand fourni par le propriétaire, puis versionnée sur une branche distincte.
 
-**Candidat V1.1.5, basé sur v1.1.4 :** ouverture Stories, S officiel pour Android/PWA et liens compacts. Accès exclusivement privé ; aucune authentification intégrée à PulSe. Ne pas publier ni installer avant validation réelle de l’isolation et du risque de mise à jour automatique. [Bilan](docs/VALIDATION-FINALE.md), [bascule privée](docs/ACCES-PRIVE.md).
+**V1.1.5, basée sur v1.1.4 :** ouverture Stories, S officiel pour Android/PWA et liens compacts. Accès exclusivement privé ; aucune authentification intégrée à PulSe. Publication autorisée sans déploiement après confirmation de l’absence de mise à jour automatique. Ne pas installer avant validation réelle de l’isolation. [Bilan](docs/VALIDATION-FINALE.md), [bascule privée](docs/ACCES-PRIVE.md).
 
 ## Interface
 
@@ -71,9 +71,9 @@ Le code n’ajoute aucune connexion utilisateur. Toute l’application, ses mét
 
 ## Publication et déploiement
 
-V1.1.5 est un candidat, pas une image déjà disponible. Les futures images gardent `ghcr.io/mick7784/links-pulse:1.1.5` et `:latest` avec le même digest AMD64/ARM64, sans réécriture des versions. `PULSE_VERSION=latest` reste un choix explicite lors d’un pull/recreate ; ne pas utiliser un observateur de mises à jour automatiques avant la bascule privée.
+La publication V1.1.5 conserve `ghcr.io/mick7784/links-pulse:1.1.5` et `:latest` avec le même digest AMD64/ARM64, sans réécriture des versions. `PULSE_VERSION=latest` reste un choix explicite lors d’un pull/recreate ; ne pas utiliser un observateur de mises à jour automatiques avant la bascule privée.
 
-La CI ne publie plus sur push/fusion. Après validation technique et bilan d’isolation approuvé, lancer manuellement le workflow depuis main avec `publish_release=true` et l’URL HTTPS du bilan dans `isolation_evidence`. Configurer au préalable des reviewers requis sur l’environnement GitHub `pulse-private-release` : le nom d’environnement seul n’installe pas cette protection. Le pipeline revalide puis publie les tags et la release ; il n’accède jamais au VPS. L’URL sert à tracer l’approbation opérateur, elle ne vérifie pas automatiquement le réseau réel.
+La CI ne publie plus sur push/fusion. Après validation technique et bilan de publication approuvé (absence de déploiement automatique, ou isolation déjà validée), lancer manuellement le workflow depuis main avec `publish_release=true` et l’URL HTTPS du bilan dans `isolation_evidence`. Les éventuelles règles d’approbation de l’environnement GitHub `pulse-private-release` restent applicables ; son nom seul n’installe pas de protection. Le pipeline revalide puis publie les tags et la release ; il n’accède jamais au VPS. L’URL sert à tracer l’approbation opérateur, elle ne vérifie pas automatiquement le réseau réel.
 
 Avant toute publication, inventorier Dockhand, Watchtower ou tout consommateur de latest : une publication peut déclencher leur redéploiement même si la CI ne déploie rien. Sans preuve de leur absence/désactivation ou de l’isolation, garder PR et release en préparation.
 

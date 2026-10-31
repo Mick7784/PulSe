@@ -1,6 +1,6 @@
 # Phase 4 — accès privé PulSe : préparation, pas déploiement
 
-Audit correctif du 31 octobre 2026, base release v1.1.4. **Isolation réelle non validée : aucune publication ni installation de v1.1.5.** Aucun accès ni changement au VPS, Pangolin, Dockhand, DNS, pare-feu ou LinKs. Le candidat n’a aucune authentification utilisateur intégrée ; sa protection d’accès dépend de la frontière privée.
+Audit correctif du 31 octobre 2026, base release v1.1.4. **Isolation réelle non validée : aucune installation de v1.1.5.** Publication des artefacts autorisée par le propriétaire après confirmation qu’aucune mise à jour automatique de PulSe n’est active ; le déploiement restera manuel. Aucun accès ni changement au VPS, Pangolin, Dockhand, DNS, pare-feu ou LinKs. Le candidat n’a aucune authentification utilisateur intégrée ; sa protection d’accès dépend de la frontière privée.
 
 ## Architecture constatée dans les sources
 
@@ -179,7 +179,7 @@ La v1.1.5 ne doit être installée qu’après preuve de fermeture des anciennes
 1. **Lecture seule** : inventaire versions, routes/alias, IP/ports IPv4 et IPv6, membres des réseaux, règles pare-feu/proxy, ressources et permissions Pangolin. Relever aussi les politiques Dockhand et tout observateur de latest ; arrêter toute mise à jour automatique avant publication, dans une intervention autorisée.
 2. Sur une recette isolée, vérifier ressource privée HTTPS, certificat/renouvellement, utilisateur autorisé, refus sans droit et révocation. Le service actuel reste inchangé pendant la préparation.
 3. Après validation et accord d’intervention : sauvegarder les paramètres ciblés et l’image par digest ; fermer l’ancienne ressource publique et tous ses alias, poser le refus de bordure sans toucher au LinKs public ; tester depuis un réseau externe et via IP/SNI, IPv4/IPv6.
-4. Publier seulement après validation technique, preuve d’isolation et confirmation qu’aucun consommateur automatique de latest n’exposera la nouvelle image. Le workflow manuel exige une URL de bilan et peut être protégé par des reviewers GitHub ; il ne certifie pas les preuves à la place de l’opérateur.
+4. Publier seulement après validation technique et confirmation qu’aucun consommateur automatique de latest n’exposera la nouvelle image. La confirmation opérateur d’absence de mise à jour automatique autorise une publication sans déploiement ; sinon, valider d’abord l’isolation réelle. Le workflow manuel exige une URL de bilan et peut être protégé par des reviewers GitHub ; il ne certifie pas les preuves à la place de l’opérateur.
 5. Après autorisation de déploiement séparée, remplacer le Compose autonome de la stack existante, vérifier les réseaux et le digest autorisé, puis tester client Pangolin connecté/déconnecté/sans droit, HTTPS, bridge et parcours Samsung/PWA. Ne jamais fusionner les anciens ports avec le modèle privé.
 6. En cas d’échec, désactiver l’accès privé en défaut et restaurer uniquement l’image/configuration ciblées en conservant le refus public. Accepter une indisponibilité ; aucune réouverture publique automatique. LinKs, ses volumes et jetons restent en place.
 

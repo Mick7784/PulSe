@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {normalizeVideo} from '../catalog.mjs';
 import {installationHelp} from '../pwa.mjs';
 import {createPulseServer,startFromEnvironment} from '../serve.mjs';
-const id='abcdefghijk',auth='Basic '+Buffer.from('admin:long-password-123').toString('base64');
+const id='abcdefghijk';
 const days=n=>Array.from({length:n},(_,i)=>({date:new Date(Date.UTC(2026,9,24-n+i)).toISOString().slice(0,10),clicks:i}));
 const json=x=>new Response(JSON.stringify(x),{headers:{'Content-Type':'application/json'}});
 const open=async s=>{await new Promise(r=>s.listen(0,'127.0.0.1',r));return 'http://127.0.0.1:'+s.address().port};
@@ -21,10 +21,10 @@ test('installation instructions cover iPhone, iPad desktop UA, Android and deskt
  assert.match(installationHelp('iPhone Safari',1),/Partager/);assert.match(installationHelp('Macintosh Safari',5),/écran d’accueil/);
  assert.match(installationHelp('iPhone CriOS',1),/Ouvrez cette page dans Safari/);assert.match(installationHelp('Android Chrome'),/menu/);assert.match(installationHelp('Windows'),/Chrome ou Edge/);
 });
-test('startup refuses missing authentication, short bridge token and unauthenticated network bind',async()=>{
- await assert.rejects(startFromEnvironment({}),/requis/);
- await assert.rejects(startFromEnvironment({PULSE_REQUIRE_AUTH:'0',PULSE_HOST:'0.0.0.0'}),/Authentification/);
- await assert.rejects(startFromEnvironment({PULSE_REQUIRE_AUTH:'0',PULSE_BRIDGE_TOKEN:'short'}),/32 caractères/);
+test('startup needs no application credentials, keeps loopback default and rejects short bridge secrets',async()=>{
+ await assert.rejects(startFromEnvironment({PULSE_BRIDGE_TOKEN:'short'}),/32 caractères/);
+ const server=await startFromEnvironment({PULSE_PORT:'0'});
+ try{assert.equal(server.address().address,'127.0.0.1');assert.equal((await fetch('http://127.0.0.1:'+server.address().port+'/')).status,200)}finally{await close(server)}
 });
 test('bridge: strict 7/30 stats, immutable video request, safe visual proxy and CSRF',async()=>{
  let wrongStats=false,privateCalls=0,fail=false,videoMissing=false,videoError=false;
@@ -39,11 +39,11 @@ test('bridge: strict 7/30 stats, immutable video request, safe visual proxy and 
   if(u.pathname==='/api/pulse/story-link'){if(videoError)return new Response(JSON.stringify({error:'Type PulSe invalide'}),{status:400});assert.deepEqual(JSON.parse(options.body),{type:'youtube',id});return json({url:'https://links.example/abc123xyz',token:'never-return-token'})}
   return new Response('{}',{status:404});
  };
- const server=createPulseServer({linksURL:'http://links.test',bridgeToken:'s'.repeat(64),user:'admin',password:'long-password-123',fetcher}),base=await open(server);
- const get=p=>fetch(base+p,{headers:{Authorization:auth}});
- const post=(body,headers={})=>fetch(base+'/api/story-link',{method:'POST',headers:{Authorization:auth,'Content-Type':'application/json','X-PulSe-Request':'1',...headers},body:JSON.stringify(body)});
+ const server=createPulseServer({linksURL:'http://links.test',bridgeToken:'s'.repeat(64),fetcher}),base=await open(server);
+ const get=p=>fetch(base+p,{headers:{}});
+ const post=(body,headers={})=>fetch(base+'/api/story-link',{method:'POST',headers:{'Content-Type':'application/json','X-PulSe-Request':'1',...headers},body:JSON.stringify(body)});
  try{
-  assert.equal((await fetch(base+'/api/catalog')).status,401);
+  assert.equal((await fetch(base+'/api/catalog')).status,200);
   const cat=await(await get('/api/catalog')).json();assert.equal(cat.video.id,id);assert.equal(cat.video.privateKey,undefined);assert.ok(!JSON.stringify(cat).includes('ssssssss'));
   for(const n of [7,30]){const stats=await(await get('/api/stats?days='+n)).json();assert.equal(stats.available,true);assert.equal(stats.days.length,n);assert.equal(stats.period,n)}
   for(const p of ['days=8','days=','days=7&days=30'])assert.equal((await get('/api/stats?'+p)).status,400);
@@ -63,8 +63,8 @@ test('bridge: strict 7/30 stats, immutable video request, safe visual proxy and 
  }finally{await close(server)}
 });
 
-test('PWA installation resources are available without credentials while the dashboard and APIs stay private',async()=>{
- const server=createPulseServer({user:'admin',password:'long-password-123'}),base=await open(server);
+test('PWA and application need only private ingress; no application challenge',async()=>{
+ const server=createPulseServer({}),base=await open(server);
  try{
   for(const path of ['/manifest.webmanifest','/icon.svg','/icon-192.png','/icon-512.png','/icon-maskable-192.png','/icon-maskable-512.png','/sw.js','/offline.html','/offline.css']){
    const response=await fetch(base+path);
@@ -79,10 +79,10 @@ test('PWA installation resources are available without credentials while the das
     assert.equal(manifest.theme_color,'#070c14');assert.equal(manifest.background_color,'#070c14');
    }
   }
-  for(const path of ['/','/index.html','/app.js','/brand-pulse.png','/api/catalog','/api/stats','/api/visual']){
-   assert.equal((await fetch(base+path)).status,401,'authenticated route: '+path);
+  for(const path of ['/','/index.html','/app.js','/brand-pulse.png','/api/stats']){
+   assert.equal((await fetch(base+path)).status,200,'private ingress route: '+path);
   }
-  const html=await(await fetch(base+'/',{headers:{Authorization:auth}})).text();
+  const html=await(await fetch(base+'/',{headers:{}})).text();
   assert.match(html,/rel="manifest"[^>]*crossorigin="use-credentials"/);
   const sw=await(await fetch(base+'/sw.js')).text();
   assert.match(sw,/credentials: 'omit'/);

@@ -1,6 +1,6 @@
 # Recette physique de la refonte PulSe avant production
 
-**À réaliser, non validée par les tests bureau.** Le [bilan final](VALIDATION-FINALE.md) distingue les preuves automatiques des vérifications VPS et Samsung. La cible de recette doit fournir l’extension LinKs `dfc67c4` (ou un successeur explicitement validé), avec HTTP Basic conservé.
+**À réaliser, non validée par les tests bureau.** Le [bilan final](VALIDATION-FINALE.md) distingue les preuves automatiques des vérifications VPS et Samsung. La cible de recette doit fournir LinKs V1.329 et être isolée derrière un accès privé HTTPS Pangolin validé. Aucun déploiement public.
 
 ## Préparer l’environnement
 

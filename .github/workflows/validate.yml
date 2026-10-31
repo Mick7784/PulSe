@@ -5,6 +5,15 @@ on:
   push:
     branches: [main, 'feat/**']
   workflow_dispatch:
+    inputs:
+      publish_release:
+        description: 'Publier version/latest après preuve d’isolation et accord opérateur'
+        type: boolean
+        default: false
+      isolation_evidence:
+        description: 'URL du bilan approuvé : refus public, droits, révocation, HTTPS, auto-update désactivé'
+        type: string
+        default: ''
 permissions:
   contents: read
 concurrency:
@@ -21,12 +30,13 @@ jobs:
           node-version: '24'
       - name: Validate version-pinned GHCR Compose
         env:
-          PULSE_TEST_USER: ci
-          PULSE_TEST_PASSWORD: ci-validation-password
+          PULSE_PRIVATE_NETWORK: fixture-private
+          LINKS_BRIDGE_NETWORK: fixture-bridge
+          PULSE_BRIDGE_TOKEN: fixture-bridge-token-at-least-32-characters
         run: |
           set -euo pipefail
           docker compose --env-file .env.example config --quiet
-          test "$(docker compose --env-file .env.example config --images)" = "ghcr.io/mick7784/links-pulse:1.1.4"
+          test "$(docker compose --env-file .env.example config --images)" = "ghcr.io/mick7784/links-pulse:1.1.5"
           PULSE_VERSION=latest docker compose --env-file .env.example config --images | grep -Fx "ghcr.io/mick7784/links-pulse:latest"
       - name: Release immutability and latest regression guards
         run: python3 tests/release-guard.py
@@ -68,23 +78,24 @@ jobs:
         run: |
           set -euo pipefail
           docker build -t pulse-validation .
-          docker run -d --name pulse-validation --read-only --cap-drop ALL --security-opt no-new-privileges:true -p 127.0.0.1:14173:4173 -e PULSE_TEST_USER=test -e PULSE_TEST_PASSWORD=local-validation-password pulse-validation
+          docker run -d --name pulse-validation --read-only --cap-drop ALL --security-opt no-new-privileges:true -p 127.0.0.1:14173:4173 pulse-validation
           trap 'docker logs pulse-validation; docker rm -f pulse-validation' EXIT
           for attempt in $(seq 1 20); do
             if curl -fsS http://127.0.0.1:14173/healthz; then break; fi
             sleep 1
           done
-          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:14173/)" = 401
-          curl -fsS -u test:local-validation-password http://127.0.0.1:14173/ -o /dev/null
-          curl -fsS -u test:local-validation-password http://127.0.0.1:14173/pwa.mjs -o /dev/null
-          curl -fsS -u test:local-validation-password http://127.0.0.1:14173/api/stats | node -e "let s='';process.stdin.on('data',b=>s+=b);process.stdin.on('end',()=>{if(JSON.parse(s).available!==false)process.exit(1)})"
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:14173/)" = 200
+          curl -fsS http://127.0.0.1:14173/ -o /dev/null
+          curl -fsS http://127.0.0.1:14173/pwa.mjs -o /dev/null
+          curl -fsS http://127.0.0.1:14173/api/stats | node -e "let s='';process.stdin.on('data',b=>s+=b);process.stdin.on('end',()=>{if(JSON.parse(s).available!==false)process.exit(1)})"
 
       - name: Private boundary through real Traefik and internal bridge
         run: node tests/edge-integration.mjs
 
   publish:
     needs: validate
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment: pulse-private-release
+    if: github.event_name == 'workflow_dispatch' && inputs.publish_release && inputs.isolation_evidence != '' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 35
     permissions:
@@ -95,6 +106,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
+      - name: Record operator isolation approval (no deployment)
+        env:
+          ISOLATION_EVIDENCE: ${{ inputs.isolation_evidence }}
+        run: |
+          node -e "const u=new URL(process.env.ISOLATION_EVIDENCE);if(u.protocol!=='https:')process.exit(1)"
+          printf 'Isolation review: %s\n' "$ISOLATION_EVIDENCE" >> "$GITHUB_STEP_SUMMARY"
       - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3

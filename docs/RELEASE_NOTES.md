@@ -1,16 +1,16 @@
-# PulSe V1.1.4 — mobile compact, statistiques du jour
+# PulSe V1.1.5 — candidat correctif privé
 
-- Navigation Stories → Liens → Stats ; header et navigation basse fixes, zones tactiles 44 px.
-- Une ligne par lien avec modification/partage accessibles, choix Story conservé, recherche nom/URL.
-- Clics aujourd'hui (tous les clics LinKs), comparaison explicitement « hier, journée complète ». Classements journaliers des liens suivis, détail à la demande. Pas de données horaires inventées.
-- LinKs V1.329 requis ; bridge privé en lecture seule, aucune migration ou base PulSe.
-- Images AMD64/ARM64 `ghcr.io/mick7784/links-pulse:1.1.4` et `:latest`, même digest vérifié. Tags numérotés non réécrits, anciennes exécutions refusées.
-- PULSE_VERSION accepte 1.1.4 (défaut épinglé) ou latest (pull/recreate explicite).
+**Préparé, non publié. Ne pas installer sur une URL publique.** Publication manuelle seulement après validation technique, bilan d’isolation approuvé et contrôle de tous les consommateurs automatiques de latest. Aucun déploiement VPS.
 
-Validation : suites Node, navigateur mobile/PWA, intégration réelle PulSe–LinKs–SQLite, tests Docker et frontière privée en CI. Captures 320/360/390/412/480 px. Pas de recette physique Samsung ; clavier et affichage standalone simulés.
+- Stories au premier affichage HTML/JavaScript, après actualisation et réouverture ; Retour conserve la navigation entre vues.
+- Icônes Android/PWA standard et maskable : S multicolore extrait du logo officiel ; header complet conservé.
+- Liens : une ligne de 50 px, séparateurs discrets, crayon cyan et partage rose, boutons 44 × 44 px ; édition complète et choix pour Story conservés.
+- Suppression de la connexion utilisateur intégrée et des identifiants devenus inutiles dans serveur, Docker, Compose, tests et guides. Accès exclusivement privé Pangolin à valider hors dépôt.
+- Compose candidat sans ports hôte ni ancien alias public, découverte Traefik désactivée ; audit et ordre de bascule dans ACCES-PRIVE.md.
+- PULSE_BRIDGE_TOKEN conservé, uniquement serveur à serveur ; protections CSRF, secrets exclus et refus des redirections conservés.
+- LinKs V1.329 épinglé par digest, aucune migration ni modification des volumes ou jetons existants.
+- Images prévues : ghcr.io/mick7784/links-pulse:1.1.5 et :latest, même digest AMD64/ARM64 ; versions immuables et garde contre les anciennes exécutions maintenus. Push/fusion ne publie plus automatiquement.
 
-L'intégration exécute l'image publiée LinKs V1.329, épinglée par digest dans `tests/links-release.json` (commit `8fbc2a5a2f1eee58f070c8f4cdc4a6a82819b560`). Les labels de version/révision, le digest téléchargé et le moteur `/app/analytics.py` exécuté sont vérifiés. Seuls les deux scripts de préparation des données de test sont montés ; aucun code applicatif de l'image n'est remplacé. SQLite et médias sont jetables, sans accès aux données de production.
+Validation exacte : voir VALIDATION-FINALE.md. Les tests Chrome et l’entrée privée HTTPS Traefik ne prouvent pas le fonctionnement du VPN, des droits réels ou du Samsung physique. Une PWA déjà installée peut garder son ancienne icône jusqu’à mise à jour des métadonnées ou réinstallation.
 
-HTTP Basic et secrets conservés. Aucun changement du VPS, Dockhand, Pangolin ou Traefik.
-
-Retour arrière : lors d'un déploiement séparément autorisé, sélectionner `PULSE_VERSION=1.1.3` et pull/recreate PulSe, sans toucher aux volumes LinKs. LinKs V1.329 reste compatible avec PulSe v1.1.3.
+Retour arrière après intervention séparément autorisée : conserver le refus public, restaurer uniquement l’image/configuration PulSe validée par digest ; conserver LinKs V1.329, volumes et PULSE_BRIDGE_TOKEN. Aucune réouverture Internet automatique.

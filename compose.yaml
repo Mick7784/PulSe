@@ -1,7 +1,9 @@
+# CANDIDAT PRIVÉ AUTONOME. Aucun déploiement avant validation réelle de l’isolation.
+# Remplace le Compose PulSe seulement après inventaire et recette réseau.
 name: links-pulse-test
 services:
   pulse:
-    image: ghcr.io/mick7784/links-pulse:${PULSE_VERSION:-1.1.4}
+    image: ghcr.io/mick7784/links-pulse:${PULSE_VERSION:-1.1.5}
     pull_policy: always
     restart: unless-stopped
     init: true
@@ -12,13 +14,14 @@ services:
     mem_limit: 192m
     cpus: 0.5
     environment:
-      PULSE_TEST_USER: ${PULSE_TEST_USER:?Identifiant PulSe requis}
-      PULSE_TEST_PASSWORD: ${PULSE_TEST_PASSWORD:?Mot de passe PulSe requis}
-      PULSE_BRIDGE_TOKEN: ${PULSE_BRIDGE_TOKEN:-}
-      LINKS_PUBLIC_URL: ${LINKS_PUBLIC_URL:-http://domotik-links:8080}
-      LINKS_BRIDGE_URL: ${LINKS_BRIDGE_URL:-}
-    ports:
-      - "127.0.0.1:${PULSE_LOCAL_PORT:-4173}:4173"
+      PULSE_HOST: 0.0.0.0
+      PULSE_PORT: 4173
+      PULSE_BRIDGE_TOKEN: ${PULSE_BRIDGE_TOKEN:?Secret bridge existant requis}
+      LINKS_PUBLIC_URL: ${LINKS_PUBLIC_URL:?Origine interne LinKs vérifiée requise}
+      LINKS_BRIDGE_URL: ${LINKS_BRIDGE_URL:?Origine interne du bridge vérifiée requise}
+    # Aucun port publié sur l'hôte, même en boucle locale.
+    labels:
+      traefik.enable: "false"
     healthcheck:
       test: ["CMD", "node", "healthcheck.mjs"]
       interval: 15s
@@ -26,9 +29,13 @@ services:
       retries: 3
       start_period: 5s
     networks:
-      pangolin_proxy:
-        aliases: [pulse-story-spike-test]
+      private_ingress:
+        aliases: [pulse-private]
+      links_bridge: {}
 networks:
-  pangolin_proxy:
+  private_ingress:
     external: true
-    name: ${PANGOLIN_PROXY_NETWORK:?Réseau Pangolin existant requis}
+    name: ${PULSE_PRIVATE_NETWORK:?Réseau du connecteur privé vérifié requis}
+  links_bridge:
+    external: true
+    name: ${LINKS_BRIDGE_NETWORK:?Réseau existant de LinKs vérifié requis}

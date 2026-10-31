@@ -1,6 +1,5 @@
 import http from 'node:http';
 import https from 'node:https';
-import { timingSafeEqual } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { httpURL, normalizeCatalog, normalizeTrackedLinks, normalizeStats, normalizeVideo, safeImageRef } from './catalog.mjs';
@@ -10,8 +9,6 @@ import {normalizeInsights} from './insights.mjs';
 
 const ROOT = new URL('./', import.meta.url);
 const STATIC = new Set(['index.html','app.js','link-manager.js','publication.js','pwa.mjs','style.css','brand-pulse.png','manifest.webmanifest','icon.svg','icon-192.png','icon-512.png','icon-maskable-192.png','icon-maskable-512.png','sw.js','offline.html','offline.css']);
-// Public installation metadata only; application HTML, scripts and all APIs stay authenticated.
-const PUBLIC_PWA = new Set(['/manifest.webmanifest','/icon.svg','/icon-192.png','/icon-512.png','/icon-maskable-192.png','/icon-maskable-512.png','/sw.js','/offline.html','/offline.css']);
 const MIME = {html:'text/html; charset=utf-8',js:'text/javascript; charset=utf-8',mjs:'text/javascript; charset=utf-8',css:'text/css; charset=utf-8',webmanifest:'application/manifest+json',svg:'image/svg+xml',png:'image/png'};
 const HEADERS = {
   'Cache-Control':'no-store', 'Referrer-Policy':'no-referrer',
@@ -19,10 +16,6 @@ const HEADERS = {
   'Permissions-Policy':'web-share=(self), clipboard-write=(self)',
   'Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob:; media-src 'self' blob:; connect-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
 };
-function sameSecret(a,b) {
-  const left=Buffer.from(a||''),right=Buffer.from(b||'');
-  return left.length===right.length&&timingSafeEqual(left,right);
-}
 function responseJson(res,code,body){const payload=Buffer.from(JSON.stringify(body));res.writeHead(code,{...HEADERS,'Content-Type':'application/json; charset=utf-8','Content-Length':payload.length});res.end(payload)}
 async function readJson(req,max=4096){let raw='';for await(const chunk of req){raw+=chunk;if(raw.length>max)throw new Error('Corps de requête trop volumineux.')}return JSON.parse(raw||'{}')}
 function fixedURL(base,path) {return new URL(path,base).href}
@@ -32,13 +25,11 @@ async function boundedBytes(response,limit){
  try{for(;;){const {value,done}=await reader.read();if(done)break;size+=value.length;if(size>limit){await reader.cancel();throw Error('Réponse trop volumineuse.')}chunks.push(value)}}finally{reader.releaseLock()}
  return Buffer.concat(chunks,size);
 }
-export function createPulseServer({ user='',password='', linksURL='http://domotik-links:8080',bridgeToken='',bridgeURL='', cert,key,fetcher=fetch }={}) {
-  if(Boolean(user)!==Boolean(password)||user.includes(':'))throw new Error('Identifiants invalides.');
+export function createPulseServer({ linksURL='http://domotik-links:8080',bridgeToken='',bridgeURL='', cert,key,fetcher=fetch }={}) {
   if(!httpURL(linksURL))throw new Error('LINKS_PUBLIC_URL doit être une URL HTTP(S) valide.');
   if(bridgeToken&&(!httpURL(bridgeURL||linksURL)))throw new Error('URL de passerelle invalide.');
   const linkBase=new URL(linksURL), privateBase=new URL(bridgeURL||linksURL);
   let catalogCache={value:null,until:0,promise:null};
-  const authValue='Basic '+Buffer.from(user+':'+password).toString('base64');
   async function requestLinks(path,{method='GET',data,privateAccess=false}={}) {
     const destination=fixedURL(privateAccess?privateBase:linkBase,path);
     const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),5500);
@@ -82,10 +73,7 @@ export function createPulseServer({ user='',password='', linksURL='http://domoti
   }
   const handler=async (req,res)=>{
     let route;try{route=new URL(req.url,'http://localhost')}catch{return responseJson(res,400,{error:'Adresse invalide.'})}
-    if(req.method==='GET'&&route.pathname==='/healthz')return responseJson(res,200,{status:'ok',version:'1.1.4'});
-    if(user && !(req.method==='GET'&&PUBLIC_PWA.has(route.pathname)) && !sameSecret(req.headers.authorization,authValue)) {
-      res.writeHead(401,{...HEADERS,'WWW-Authenticate':'Basic realm="PulSe", charset="UTF-8"'});return res.end('Connexion requise.');
-    }
+    if(req.method==='GET'&&route.pathname==='/healthz')return responseJson(res,200,{status:'ok',version:'1.1.5'});
     try {
       const action=route.pathname.slice('/api/'.length),managed=['link-manager','link-preview','link-save','link-token'].includes(action)&&route.pathname==='/api/'+action;
       if(req.method==='POST'&&(managed||route.pathname==='/api/story-link')){
@@ -185,14 +173,11 @@ export function createPulseServer({ user='',password='', linksURL='http://domoti
   return cert&&key?https.createServer({cert,key,minVersion:'TLSv1.2'},handler):http.createServer(handler);
 }
 export async function startFromEnvironment(env=process.env) {
-  if(env.PULSE_REQUIRE_AUTH!=='0'&&(!env.PULSE_TEST_USER||!env.PULSE_TEST_PASSWORD))throw new Error('Identifiants PulSe requis.');
-  if(env.PULSE_REQUIRE_AUTH!=='0'&&(env.PULSE_TEST_PASSWORD.length<12||env.PULSE_TEST_PASSWORD==='REMPLACER_PAR_UN_SECRET_ALEATOIRE'))throw new Error('Mot de passe de test : 12 caractères minimum.');
   if(env.PULSE_BRIDGE_TOKEN&&env.PULSE_BRIDGE_TOKEN.length<32)throw new Error('Secret de passerelle : 32 caractères minimum.');
-  if(env.PULSE_REQUIRE_AUTH==='0'&&!['127.0.0.1','localhost','::1'].includes(env.PULSE_HOST||'127.0.0.1'))throw new Error('Authentification obligatoire hors boucle locale.');
-  const server=createPulseServer({user:env.PULSE_TEST_USER||'',password:env.PULSE_TEST_PASSWORD||'',linksURL:env.LINKS_PUBLIC_URL||'http://domotik-links:8080',bridgeToken:env.PULSE_BRIDGE_TOKEN||'',bridgeURL:env.LINKS_BRIDGE_URL||''});
+  const server=createPulseServer({linksURL:env.LINKS_PUBLIC_URL||'http://domotik-links:8080',bridgeToken:env.PULSE_BRIDGE_TOKEN||'',bridgeURL:env.LINKS_BRIDGE_URL||''});
   const host=env.PULSE_HOST||'127.0.0.1',port=Number(env.PULSE_PORT||4173);
   await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(port,host,resolve)});
-  console.log(`PulSe V1.1.4 : HTTP sur ${host}:${port}`);
+  console.log(`PulSe V1.1.5 : HTTP sur ${host}:${port}`);
   return server;
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href)startFromEnvironment().catch(e=>{console.error('Démarrage refusé :',e.message);process.exitCode=1});

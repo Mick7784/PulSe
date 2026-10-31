@@ -18,11 +18,11 @@ elif name=='curl':print('{"token":"fixture-token"}' if any('/token?' in a for a 
 elif name=='docker':
  if args[:3]==['buildx','imagetools','inspect']:
   print(json.dumps({'manifests':[{'platform':{'os':'linux','architecture':a},'digest':'sha256:'+a} for a in ['amd64','arm64']]}) if '--raw' in args else 'sha256:same')
- elif args[:2]==['image','inspect']:print(('wrong' if mode=='collision' else 'reviewed') if 'revision' in args[-1] else '1.1.4')
+ elif args[:2]==['image','inspect']:print(('wrong' if mode=='collision' else 'reviewed') if 'revision' in args[-1] else '1.1.5')
 """
 for mode in ['stale','newer','registry-error','collision','existing','missing']:
  with tempfile.TemporaryDirectory() as directory:
-  temp=Path(directory);(temp/'bin').mkdir();(temp/'package.json').write_text('{"version":"1.1.4"}');log=temp/'log'
+  temp=Path(directory);(temp/'bin').mkdir();(temp/'package.json').write_text('{"version":"1.1.5"}');log=temp/'log'
   for name in ['gh','curl','docker']:
    p=temp/'bin'/name;p.write_text(stub);p.chmod(0o755)
   result=subprocess.run(['bash',str(root/'scripts/publish-release.sh')],cwd=temp,env={**os.environ,'PATH':str(temp/'bin')+os.pathsep+os.environ['PATH'],'CASE':mode,'LOG':str(log),'GITHUB_REPOSITORY':'fixture/PulSe','GITHUB_SHA':'reviewed','GITHUB_ACTOR':'fixture','GH_TOKEN':'fixture','GITHUB_STEP_SUMMARY':str(temp/'summary')},capture_output=True,text=True)

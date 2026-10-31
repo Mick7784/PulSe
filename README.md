@@ -2,7 +2,7 @@
 
 Application mobile de gestion des liens suivis, de préparation de publications et de consultation des clics LinKs. Docker indépendant ; aucune commande de déploiement automatique. Base V1 récupérée intégralement depuis le Compose Dockhand fourni par le propriétaire, puis versionnée sur une branche distincte.
 
-**Release V1.1.4 préparée :** refonte mobile et fonctions PulSe/LinKs intégrées ; la publication est distincte du déploiement sur le VPS. HTTP Basic reste actif tant que l'accès privé Pangolin n'est pas validé. Voir [le bilan de validation finale et les prérequis de livraison](docs/VALIDATION-FINALE.md). Aucun déploiement VPS ni retrait de Basic n’est autorisé par ce bilan.
+**V1.1.5, basée sur v1.1.4 :** ouverture Stories, S officiel pour Android/PWA et liens compacts. Accès exclusivement privé ; aucune authentification intégrée à PulSe. Publication autorisée sans déploiement après confirmation de l’absence de mise à jour automatique. Ne pas installer avant validation réelle de l’isolation. [Bilan](docs/VALIDATION-FINALE.md), [bascule privée](docs/ACCES-PRIVE.md).
 
 ## Interface
 
@@ -61,74 +61,42 @@ LinKs V1.315 possède la passerelle privée de base. LinKs V1.316 ajoute `GET /a
 
 Les métadonnées proviennent de `/latest-video.json` de LinKs ; aucune deuxième clé YouTube ni connexion Meta n’est ajoutée. À la préparation explicite d’une vidéo, LinKs crée/réutilise un lien privé avec destination fixée à cette vidéo et source Instagram Story. Les catégories ont été supprimées dans LinKs V1.327. Les jetons des anciennes offres et des anciens liens restent réutilisés. Ce suivi est par contenu/source, pas par publication Instagram.
 
-## Variables et déploiement, après validation uniquement
+## Configuration privée candidate — ne pas appliquer maintenant
 
-Conserver les valeurs existantes dans Dockhand, jamais dans Git :
+Le code n’ajoute aucune connexion utilisateur. Toute l’application, ses métadonnées PWA et ses API doivent être accessibles uniquement via une ressource privée Pangolin autorisée. Le nom d’un réseau, une étiquette Docker ou un champ d’approbation ne prouve jamais cette isolation.
 
-```dotenv
-PULSE_VERSION=1.1.4
-PANGOLIN_PROXY_NETWORK=pangolin
-PULSE_TEST_USER=
-PULSE_TEST_PASSWORD=
-PULSE_BRIDGE_TOKEN=
-```
+`compose.yaml` et `security/compose.private.yaml` sont des modèles autonomes identiques : **remplacer** le fichier de la stack après validation, ne pas les fusionner avec un ancien Compose dont les ports/réseaux pourraient subsister. Ils n’exposent aucun port hôte, retirent l’ancien alias public et désactivent la découverte Traefik Docker. Les deux réseaux externes doivent être inventoriés et distincts ; le connecteur privé cible `http://pulse-private:4173`. Un ancien routeur public ou un conteneur partageant le réseau LinKs pourrait toujours atteindre PulSe : fermer ces chemins avant installation.
 
-`PULSE_TEST_USER` et `PULSE_TEST_PASSWORD` sont obligatoires (mot de passe existant de 12 caractères minimum). `PULSE_BRIDGE_TOKEN` doit être identique au secret du conteneur LinKs, 32 caractères minimum ; vide signifie passerelle non connectée. Ne pas transmettre ces valeurs par conversation. Valeurs par défaut : `LINKS_PUBLIC_URL=http://domotik-links:8080`, `LINKS_BRIDGE_URL` reprend cette URL, port 4173.
+`.env.example` contient uniquement : version, réseaux privé/bridge, origines internes LinKs et `PULSE_BRIDGE_TOKEN`. Conserver ce dernier secret existant, identique à LinKs, au moins 32 caractères ; ne jamais le transmettre dans la conversation ou le navigateur. Sans bridge, les fonctions concernées restent explicitement indisponibles. `node serve.mjs` écoute par défaut sur 127.0.0.1 ; l’image écoute sur 0.0.0.0 à l’intérieur du conteneur et exige donc une isolation externe.
 
-Le Compose conserve `name: links-pulse-test`, l’alias `pulse-story-spike-test`, le réseau externe `pangolin`, le port lié à 127.0.0.1 et `/healthz`. Pangolin termine HTTPS et conserve sa cible `http://pulse-story-spike-test:4173` ; ne pas modifier LinKs, son volume ou ses ressources réseau pour déployer PulSe. Le service et le nom de stack existants doivent rester identiques pour éviter deux conteneurs utilisant le même alias.
+## Publication et déploiement
 
-`compose.yaml` utilise désormais l’image publique versionnée `ghcr.io/mick7784/links-pulse:${PULSE_VERSION:-1.1.4}`, sans contexte Git ni compilation locale. `pull_policy: always` télécharge l’image lors d’un redéploiement. Le vrai `.env` de Dockhand conserve la version actuellement validée et les secrets préexistants ; `.env.example` n’est qu’un modèle et ne contient aucun secret.
+La publication V1.1.5 conserve `ghcr.io/mick7784/links-pulse:1.1.5` et `:latest` avec le même digest AMD64/ARM64, sans réécriture des versions. `PULSE_VERSION=latest` reste un choix explicite lors d’un pull/recreate ; ne pas utiliser un observateur de mises à jour automatiques avant la bascule privée.
 
-Avant toute mise à jour : conserver le Compose et l’image V1, les variables, la cible Pangolin et la possibilité de reconstruire/revenir à la V1. LinKs V1.316 est publiée : s’assurer qu’elle est aussi *déployée* avant de tester les liens YouTube suivis et les statistiques 30 jours. Une fusion de PR ne déploie jamais PulSe. Depuis la V1.1.1, le pipeline de release publie une image GHCR versionnée depuis `main` après validation ; le déploiement reste manuel dans Dockhand.
+La CI ne publie plus sur push/fusion. Après validation technique et bilan de publication approuvé (absence de déploiement automatique, ou isolation déjà validée), lancer manuellement le workflow depuis main avec `publish_release=true` et l’URL HTTPS du bilan dans `isolation_evidence`. Les éventuelles règles d’approbation de l’environnement GitHub `pulse-private-release` restent applicables ; son nom seul n’installe pas de protection. Le pipeline revalide puis publie les tags et la release ; il n’accède jamais au VPS. L’URL sert à tracer l’approbation opérateur, elle ne vérifie pas automatiquement le réseau réel.
 
-## Sécurité et comportement dégradé
+Avant toute publication, inventorier Dockhand, Watchtower ou tout consommateur de latest : une publication peut déclencher leur redéploiement même si la CI ne déploie rien. Sans preuve de leur absence/désactivation ou de l’isolation, garder PR et release en préparation.
 
-La phase 4 prépare l'accès privé Pangolin sans l'activer : [audit, configuration candidate, vérifications VPS, recette Samsung et retour arrière](docs/ACCES-PRIVE.md). HTTP Basic reste obligatoire. Le Compose de production existant n'est pas modifié ; le modèle privé séparé retire les ports hôte, et un générateur prépare le refus public PulSe et `/api/pulse/` de LinKs après inventaire des routes réelles. Aucun paramètre du VPS n'est présumé validé.
+Une future installation nécessite une autorisation séparée après les étapes de [bascule et retour arrière](docs/ACCES-PRIVE.md). Conserver LinKs V1.329, ses volumes et ses jetons. Aucun changement de schéma PulSe/LinKs.
 
-Une coupure de connexion dans une page ouverte conserve la Story en mémoire. Les requêtes de catalogue, statistiques et génération de lien expirent après 12 secondes, affichent une erreur de connexion ou d'accès et ne sont jamais rejoués automatiquement ; le bouton de réessai existant reste disponible. Fermer ou recharger la page peut toujours perdre le brouillon.
+## Sécurité et continuité
 
-Le navigateur n’obtient jamais le Bearer LinKs. Basic Auth PulSe reste obligatoire hors développement local. Aucun proxy admin générique. Le proxy média n’accepte que des IDs de catalogue, des images `/uploads/` ou `/assets/` autorisées, et des miniatures YouTube HTTPS du domaine `i.ytimg.com` correspondant à la vidéo. Redirections amont refusées, taille et durée limitées. POST JSON avec contrôle d’origine et en-tête dédié. Les API, liens suivis et médias ne sont jamais mis en cache par le service worker ; les photos/vidéos ne sont jamais téléversées.
+Le Bearer LinKs reste exclusivement serveur à serveur. Contrôle d’origine, en-tête POST dédié, projection des réponses et refus des redirections amont sont conservés. Aucun proxy admin général. Le service worker ne cache que les métadonnées publiques de l’application et l’écran hors connexion générique ; jamais HTML applicatif, API, liens privés, données ou médias personnels. Ces métadonnées restent elles aussi à l’intérieur de la frontière privée lorsqu’elles sont téléchargées.
 
-En cas de statistiques incomplètes, de période incompatible ou d’erreur : valeurs « — » et graphique retiré, sans conserver de chiffres périmés sous la nouvelle période. Les liens suivis ne sont pas remplacés par des URL partenaires si la passerelle échoue. Les visuels `system:` non rendus par LinKs peuvent être remplacés par un média choisi sur le téléphone.
+Une coupure dans une page vivante conserve la préparation en mémoire ; aucun POST n’est rejoué automatiquement. Fermer, recharger ou laisser Android détruire le processus peut perdre le brouillon. Le message d’accès renvoie à la connexion et aux droits Pangolin.
+
+## Interface corrective
+
+Stories est visible dès le HTML initial, après actualisation et nouvelle ouverture, avec navigation Retour entre vues. Le logo complet du header est inchangé. Les icônes 192/512 standard et maskable proviennent du S multicolore officiel, sans nouvelle interprétation graphique ; voir [sa provenance](assets/README.md). Une PWA déjà installée peut conserver son ancienne icône jusqu’au rafraîchissement des métadonnées par Android ; une réinstallation sur la même origine peut être nécessaire après avoir terminé les brouillons.
+
+Liens : séparateurs discrets, lignes de 50 px, nom sur une ligne avec ellipsis, nom complet dans l’éditeur et description accessible des boutons. Crayon cyan pour Modifier, nœuds de partage roses pour Partager, zones tactiles 44 × 44 px. Le choix d’un lien pour une Story est conservé.
 
 ## Tests
 
-`node --test tests/*.test.mjs` : catalogue, authentification, restrictions du proxy, contrats 7/30 jours et vidéo, absence de repli non suivi, instructions PWA. Aucun paquet de production requis.
+- `node --test tests/*.test.mjs` : routes sans connexion intégrée, Bearer privé, CSRF, projections, redirections et secrets exclus, contrats des statistiques et PWA.
+- `NODE_PATH=<Playwright> node tests/browser.cjs` : Chrome réel, cinq largeurs 320/360/390/412/480, histoire de navigation, rechargement/réouverture, photo/vidéo, coupures, service worker, mise à jour avec brouillons et deux onglets. Le mode standalone et le partage sont simulés ; aucune recette physique Samsung.
+- `LINKS_CONTAINER=1 LINKS_REPO=<checkout du commit verrouillé> node tests/links-integration.cjs` : image publiée LinKs V1.329 épinglée par digest dans `tests/links-release.json`, moteur de l’image inchangé, SQLite et médias jetables ; contrôle versions/révision/anciens liens.
+- `docker build -t pulse-validation .` puis `node tests/edge-integration.mjs` : vrai Traefik, refus public prioritaire malgré anciens routeurs, bridge interne et contrats publics LinKs. L’entrée privée HTTPS de recette ne simule ni identité ni tunnel Pangolin.
+- `python3 tests/release-guard.py` : versions immuables, collision, erreur registre, ancien commit et promotion latest après vérification des architectures.
 
-`NODE_PATH=<dossier node_modules contenant playwright> node tests/browser.cjs` : parcours mobile de 320 à 480 px avec serveurs et données de test locaux, conservation du brouillon entre les vues, photo/vidéo, erreurs, partage, copie et installation. Un profil navigateur isolé permet les contrôles d’installation sans le mode privé. `CHROMIUM_PATH` facultatif pour utiliser un Chrome installé ; `PULSE_SCREENSHOT_DIR` choisit le dossier des captures. La CI installe le navigateur de test et construit/vérifie une image Docker isolée. Sur `main`, après validation, elle publie sur GHCR et crée une release GitHub si cette version n’existe pas déjà ; aucun déploiement VPS n’est exécuté.
-
-Voir [la recette physique](docs/RECETTE.md) et [les changements](docs/V1.1.md). Un test de navigateur simulant Web Share ne prouve ni l’ouverture effective de Story ni la publication sur Samsung.
-
-La CI d'intégration utilise l'image LinKs publiée, verrouillée par digest et commit dans [`tests/links-release.json`](tests/links-release.json). Avec Docker disponible, `LINKS_CONTAINER=1 LINKS_REPO=<checkout du commit verrouillé> node tests/links-integration.cjs` télécharge cette image, vérifie sa version/révision et exécute son moteur Python dans un conteneur en lecture seule, avec SQLite et médias temporaires. Le checkout fournit uniquement le script générique de préparation des données ; aucun code applicatif de l'image n'est remplacé. Le mode local sans `LINKS_CONTAINER` reste disponible pour développer avec un checkout LinKs.
-
-
-## Mise à jour par image GHCR
-
-Le Compose conserve le nom de projet `links-pulse-test`, l'alias Pangolin `pulse-story-spike-test`, le réseau externe et les restrictions du conteneur. Il ne contient plus de `build:` local. Pour mettre à jour PulSe dans Dockhand :
-
-1. Sauvegarder le Compose, les valeurs de l'environnement et l'image actuelle (pour retour arrière). Ne pas copier les secrets dans Git.
-2. Remplacer le Compose de la stack existante par `compose.yaml` de la branche `main` ; renseigner dans le `.env` réel le tag effectivement publié et autorisé, sans modifier les autres variables. Ne pas choisir un tag à partir du numéro technique de cette branche.
-3. Redéployer **la stack existante** ; ne pas créer un deuxième service sur le même alias. Docker récupère l'image versionnée depuis GHCR. Vérifier le healthcheck et la cible Pangolin.
-4. En cas de problème, remettre l'ancien Compose et l'ancienne image. Pour les futures versions, changer `PULSE_VERSION` vers un tag *publié* puis redéployer.
-
-Si GHCR refuse un téléchargement anonyme, vérifier la visibilité publique du package GitHub ou configurer l'authentification du registre dans Dockhand. Le tag ne dépend pas de `latest`.
-
-
-## Correctif PWA V1.1.2
-
-Le manifeste, les icônes, la page hors-ligne et le service worker sont accessibles sans Basic Auth, afin que Chrome Android puisse récupérer les métadonnées d'installation (le manifeste HTML indique également `crossorigin="use-credentials"`). Les pages d'application, scripts et APIs continuent d'exiger l'authentification. Le service worker ne met **jamais** en cache le tableau de bord authentifié, les liens, les images personnelles ou les API.
-
-La CI vérifie le manifeste via l'API Chromium et le service worker, mais le statut « application installée » ne peut être confirmé qu'après un test sur le vrai Samsung, depuis l'URL HTTPS Pangolin et hors navigateur intégré à une autre application. Si Chrome n'offre que « raccourci », vérifier le certificat HTTPS, l'accès HTTP 200 au manifeste/icônes depuis le réseau privé autorisé et les éventuelles protections supplémentaires du proxy.
-
-Ce paragraphe décrit la release historique V1.1.2, pas la refonte de cette branche. Pour une livraison future, choisir uniquement une image publiée après autorisation ; conserver le tag et le digest réellement en service pour le retour arrière. La charte mobile est intégrée à cette branche, sans nouvelle release à ce stade.
-
-
-## V1.1.4 — mobile compact et statistiques du jour
-
-Navigation Stories → Liens → Stats ; header et barre basse fixes. Une ligne par lien, actions Modifier/Partager ; le choix pour une Story reste distinct. Les brouillons et médias restent en mémoire.
-
-LinKs **V1.329 minimum** : `/api/pulse/today` est privé, en lecture seule, sur les compteurs existants. KPI : tous les clics (page, campagnes, liens suivis). Classements : liens suivis uniquement, inclus dans ce total. Comparaison avec **hier, journée complète** ; aucune granularité horaire disponible. Fuseau Europe/Paris ; un autre fuseau est signalé comme incompatible, sans conversion fictive ni changement de configuration.
-
-`PULSE_VERSION=1.1.4` force cette release ; `PULSE_VERSION=latest` choisit la dernière stable lors du prochain **pull/recreate explicite**. Aucune mise à jour continue n'est promise. Les tags numéroté et latest ont le même digest AMD64/ARM64. La CI bloque un ancien commit et ne reconstruit pas un tag existant ; une reprise vérifie les labels de révision des deux architectures avant promotion. Le candidat privé conserve son exigence d'image explicitement vérifiée.
-
-Retour arrière, lors d'un déploiement séparément autorisé : remettre `PULSE_VERSION=1.1.3`, puis pull/recreate PulSe. Conserver LinKs V1.329 (API additive), ses volumes, secrets, tokens et HTTP Basic. Aucun déploiement ni changement d'infrastructure n'est effectué par cette release.
+La CI exécute ces suites sans données de production. Voir le [bilan exact](docs/VALIDATION-FINALE.md) et la [recette Samsung](docs/RECETTE.md) pour les limites.

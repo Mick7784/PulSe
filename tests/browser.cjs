@@ -21,12 +21,12 @@ const close=s=>new Promise(r=>s.close(r));
   if(u.pathname==='/uploads/test.png'){res.setHeader('Content-Type','image/png');return res.end(png)}
   res.statusCode=404;json({});
  });
- const upstream=await open(fake),pulse=createPulseServer({linksURL:upstream,bridgeToken:'s'.repeat(64),user:'admin',password:'long-password-123',fetcher:(url,opts)=>new URL(url).hostname==='i.ytimg.com'?Promise.resolve(new Response(png,{headers:{'Content-Type':'image/png'}})):fetch(url,opts)}),base=await open(pulse);
+ const upstream=await open(fake),pulse=createPulseServer({linksURL:upstream,bridgeToken:'s'.repeat(64),fetcher:(url,opts)=>new URL(url).hostname==='i.ytimg.com'?Promise.resolve(new Response(png,{headers:{'Content-Type':'image/png'}})):fetch(url,opts)}),base=await open(pulse);
  let browser;const errors=[];
  try{
   // A real profile permits installation checks; recent Chrome rejects incognito installation.
   const profile=await mkdtemp(resolve(__dirname,'../../pulse-browser-profile-'));
-  const context=await chromium.launchPersistentContext(profile,{headless:true,...(process.env.CHROMIUM_PATH?{executablePath:process.env.CHROMIUM_PATH}:{}),httpCredentials:{username:'admin',password:'long-password-123'},viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+  const context=await chromium.launchPersistentContext(profile,{headless:true,...(process.env.CHROMIUM_PATH?{executablePath:process.env.CHROMIUM_PATH}:{}),viewport:{width:390,height:844},isMobile:true,hasTouch:true});
   browser=context;
   await context.addInitScript(()=>{
    // Keep the real installability check, but exercise prompt responses with controlled events.
@@ -55,8 +55,10 @@ const close=s=>new Promise(r=>s.close(r));
   await cdp.detach();
   assert.equal(await page.locator('header .brand').getAttribute('alt'),'PulSe by DomotiK Studio');
   assert.equal(await page.locator('header .brand').evaluate(img=>img.complete&&img.naturalWidth===600&&img.naturalHeight===205),true);
-  assert.equal(await page.locator('#nav-stats').getAttribute('aria-current'),'page');
-  assert.equal(await page.locator('#story-panel').isVisible(),false);assert.equal(await page.locator('#stat-today').isVisible(),true);
+  assert.equal(await page.locator('#nav-stories').getAttribute('aria-current'),'page');
+  assert.equal(await page.locator('#story-panel').isVisible(),true);
+  await page.locator('#nav-stats').click();
+  assert.equal(await page.locator('#stat-today').isVisible(),true);
   assert.equal(await page.getByText('Photo personnelle',{exact:true}).count(),0);assert.equal(await page.getByText('Stories déclarées',{exact:true}).count(),0);
   assert.deepEqual(await page.locator('.bottom-nav button').allTextContents(),['Stories','Liens','Stats']);
   assert.equal(await page.locator('[data-period]').count(),0);

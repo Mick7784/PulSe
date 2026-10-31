@@ -5,17 +5,16 @@ import {createPulseServer} from '../serve.mjs';
 test('link bridge confines routes, credentials, fields and failures to its public contract',async()=>{
  const secret='never-return-this-bridge-secret',calls=[];
  let upstreamStatus=200,upstream={version:1,items:[{id:'existing',name:'Nom',url:'https://example.com',notes:'Note',partner_id:'',revision:'rev',token:secret}],partners:[{id:'partner',name:'Partenaire',template:secret}],sources:[{id:'source',name:'YouTube',platform:'youtube',active:true,admin_session:secret}],secret};
- const server=createPulseServer({user:'test',password:'a-strong-test-password',linksURL:'http://public.test',bridgeURL:'http://private.test',bridgeToken:secret,fetcher:async(url,opts)=>{
+ const server=createPulseServer({linksURL:'http://public.test',bridgeURL:'http://private.test',bridgeToken:secret,fetcher:async(url,opts)=>{
   calls.push({url,opts});return new Response(JSON.stringify(upstream),{status:upstreamStatus,headers:{'Content-Type':'application/json'}});
  }});
  await new Promise(r=>server.listen(0,'127.0.0.1',r));
  const base='http://127.0.0.1:'+server.address().port;
- const headers={Authorization:'Basic '+Buffer.from('test:a-strong-test-password').toString('base64'),'Content-Type':'application/json','X-PulSe-Request':'1'};
+ const headers={'Content-Type':'application/json','X-PulSe-Request':'1'};
  const request=(path,body,extra={})=>fetch(base+path,{method:body?'POST':'GET',headers:{...headers,...extra},body:body?JSON.stringify(body):undefined});
  try{
   for(const path of ['/api/admin','/api/pulse/link-save','/api/link-manager/extra','/link-api.mjs'])assert.equal((await request(path)).status,404);
   for(const [path,body]of [['/api/link-manager',null],['/api/link-preview',{}],['/api/link-save',{}],['/api/link-token',{}]]){
-   assert.equal((await request(path,body,{Authorization:''})).status,401);
    if(body){
     assert.equal((await request(path,body,{'X-PulSe-Request':''})).status,403);
     assert.equal((await request(path,body,{Origin:'https://foreign.example'})).status,403);

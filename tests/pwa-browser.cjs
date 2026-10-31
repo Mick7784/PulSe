@@ -1,4 +1,4 @@
-// Real service-worker lifecycle with Basic Auth, two tabs and changing server builds.
+// Real service-worker lifecycle behind the private ingress, two tabs and changing server builds.
 const {chromium}=require('playwright');
 const assert=require('node:assert/strict');
 const http=require('node:http');
@@ -11,7 +11,7 @@ module.exports=async function(){
  const image=await readFile(resolve(__dirname,'../icon-192.png'));
  let build=0,failAsset=false,context;
  const json=data=>new Response(JSON.stringify(data),{headers:{'Content-Type':'application/json'}});
- const pulse=createPulseServer({user:'admin',password:'long-password-123',linksURL:'http://links.test',bridgeToken:'s'.repeat(64),fetcher:async(url)=>{
+ const pulse=createPulseServer({linksURL:'http://links.test',bridgeToken:'s'.repeat(64),fetcher:async(url)=>{
   const path=new URL(url).pathname;
   if(path==='/api/public-config')return json({links:[]});
   if(path==='/latest-video.json')return json(null);
@@ -41,7 +41,7 @@ module.exports=async function(){
   return worker?.state;
  });
  try{
-  context=await chromium.launchPersistentContext(await mkdtemp(resolve(__dirname,'../../pulse-pwa-profile-')),{headless:true,...(process.env.CHROMIUM_PATH?{executablePath:process.env.CHROMIUM_PATH}:{}),httpCredentials:{username:'admin',password:'long-password-123'},viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+  context=await chromium.launchPersistentContext(await mkdtemp(resolve(__dirname,'../../pulse-pwa-profile-')),{headless:true,...(process.env.CHROMIUM_PATH?{executablePath:process.env.CHROMIUM_PATH}:{}),viewport:{width:390,height:844},isMobile:true,hasTouch:true});
   await context.addInitScript(()=>{
    window.addEventListener('beforeinstallprompt',e=>e.preventDefault());
    Object.defineProperty(navigator,'clipboard',{value:{writeText:()=>Promise.resolve()}});

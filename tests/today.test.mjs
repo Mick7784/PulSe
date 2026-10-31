@@ -8,12 +8,12 @@ test('daily snapshot rejects false scopes, totals, dates and fabricated comparis
  for(const extra of [{today:-1},{today:1},{today:NaN},{timezone:'UTC'},{date:'2026-10-31'},{yesterday_date:'2026-10-30'},{generated_at:'bad'},{comparison:'same-hour'},{ranking_scope:'all-clicks'},{top_links:[{...sample().top_links[0],clicks:3}]}])assert.throws(()=>normalizeToday({...sample(),...extra}));
  assert.equal(normalizeToday({version:1,available:false,reason:'timezone'}).available,false);
 });
-test('today bridge stays Basic/Bearer private, bounded and no-store',async()=>{
+test('today bridge stays Bearer private, bounded and no-store',async()=>{
  let response=sample(),calls=0;
- const server=createPulseServer({user:'test',password:'local-validation-password',linksURL:'http://links.test',bridgeToken:'s'.repeat(64),fetcher:async(url,options)=>{calls++;assert.equal(new URL(url).pathname,'/api/pulse/today');assert.equal(options.headers.Authorization,'Bearer '+'s'.repeat(64));return new Response(JSON.stringify(response))}});
- await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port,headers={Authorization:'Basic '+Buffer.from('test:local-validation-password').toString('base64')};
+ const server=createPulseServer({linksURL:'http://links.test',bridgeToken:'s'.repeat(64),fetcher:async(url,options)=>{calls++;assert.equal(new URL(url).pathname,'/api/pulse/today');assert.equal(options.headers.Authorization,'Bearer '+'s'.repeat(64));return new Response(JSON.stringify(response))}});
+ await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port,headers={};
  try{
-  assert.equal((await fetch(base+'/api/today')).status,401);assert.equal(calls,0);
+  assert.equal(calls,0);
   assert.equal((await fetch(base+'/api/today?days=7',{headers})).status,400);assert.equal(calls,0);
   const r=await fetch(base+'/api/today',{headers});assert.match(r.headers.get('cache-control'),/no-store/);assert.equal((await r.json()).today,6);
   response={...sample(),today:1};assert.equal((await(await fetch(base+'/api/today',{headers})).json()).available,false);

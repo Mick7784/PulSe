@@ -2,7 +2,7 @@
 
 ## Dépendance et périmètre
 
-Base PulSe : `c67eebd`, branche `feat/pulse-refonte-mobile`. LinKs audité avant modification : main/tag publié **V1.327**, `079b2987df71ebd332745d80df423ed42674c042`. La branche dédiée `feat/pulse-link-management` ajoute le bridge au commit **1946186810d0636c3568ccfa295021897f00cf58**. La CI PulSe utilise ce commit exact, jamais une branche flottante.
+Base PulSe : `c67eebd`, branche `feat/pulse-refonte-mobile`. LinKs audité avant modification : main/tag publié **V1.327**, `8fbc2a5a2f1eee58f070c8f4cdc4a6a82819b560`. La branche dédiée `feat/pulse-link-management` ajoute le bridge au commit **1946186810d0636c3568ccfa295021897f00cf58**. La CI PulSe utilise ce commit exact, jamais une branche flottante.
 
 La V1.327 publiée ne contient pas encore ce bridge de gestion. Tant que l'extension LinKs n'est pas disponible, l'onglet Liens affiche cette dépendance ; les Stories et statistiques conservent leurs routes existantes. Cette phase ne déploie et ne publie aucune image, ne fusionne aucune branche et ne change aucun paramètre Pangolin.
 
@@ -22,13 +22,13 @@ Choisir ensuite une plateforme/source et demander son lien court. `tracked_links
 
 ## Sécurité et réseau
 
-Le navigateur utilise uniquement quatre routes PulSe : `GET /api/link-manager` et `POST /api/link-preview`, `/api/link-save`, `/api/link-token`. Le serveur les traduit vers les quatre routes dédiées `/api/pulse/…`. HTTP Basic, contrôle d'origine, en-tête POST dédié et taille maximale 32 Kio restent imposés. Le Bearer ne quitte jamais les échanges serveur à serveur. Les réponses sont projetées sur les champs nécessaires ; les erreurs amont, modèles partenaires, jetons internes et sessions administratives ne sont pas relayés. Aucun proxy admin général.
+Le navigateur utilise uniquement quatre routes PulSe : `GET /api/link-manager` et `POST /api/link-preview`, `/api/link-save`, `/api/link-token`. Le serveur les traduit vers les quatre routes dédiées `/api/pulse/…`. Accès privé Pangolin, contrôle d'origine, en-tête POST dédié et taille maximale 32 Kio restent imposés. Le Bearer ne quitte jamais les échanges serveur à serveur. Les réponses sont projetées sur les champs nécessaires ; les erreurs amont, modèles partenaires, jetons internes et sessions administratives ne sont pas relayés. Aucun proxy admin général.
 
 Les préparations restent en mémoire pendant une erreur réseau, une navigation entre onglets PulSe ou une mise à jour en attente. Aucune écriture n'est rejouée automatiquement au retour du réseau. Fermer, recharger volontairement ou laisser Android détruire la page peut perdre une saisie non enregistrée : elle n'est pas stockée sur le téléphone. Une saisie modifiée ou une écriture en cours bloque l'application d'une mise à jour ; une activation dans un autre onglet ne la recharge pas. Les protections des Stories restent actives en parallèle.
 
-API, formulaires, liens, médias et scripts authentifiés restent exclus du cache du service worker. Aucun localStorage, IndexedDB, base parallèle ni accès admin LinKs n'est ajouté. La configuration privée préparée en phase 4, y compris le refus externe de `/api/pulse/`, reste inchangée et doit toujours être validée sur le VPS avant activation réelle.
+API, formulaires, liens, médias et scripts applicatifs restent exclus du cache du service worker. Aucun localStorage, IndexedDB, base parallèle ni accès admin LinKs n'est ajouté. La configuration privée et le refus externe de `/api/pulse/` sont à valider sur le VPS avant activation ; le candidat courant retire les anciens ports et alias publics.
 
-Le marqueur du service worker passe à `pwa5-1` pour annoncer cette version aux pages déjà ouvertes, avec les confirmations et protections de brouillon existantes. Sa liste de ressources publiques autorisées au cache ne change pas.
+Le marqueur courant du service worker est `1.1.5` pour annoncer cette version aux pages déjà ouvertes, avec les confirmations et protections de brouillon existantes. Sa liste de ressources publiques autorisées au cache ne change pas.
 
 ## Validation reproductible
 
@@ -43,4 +43,4 @@ Le test réel couvre affiliation auto/manuelle/Aucun, création, renommage, dest
 
 À réaliser physiquement après une autorisation de mise à disposition : répéter création/modification/copier dans Chrome et dans la PWA, avec clavier tactile, partenaires auto/manuels, source historique et source récente. Refuser le presse-papiers, annuler un abandon, changer d'onglet avec Story et formulaire en cours. Couper/reconnecter Pangolin, interrompre un enregistrement et vérifier qu'une reprise ne crée aucun doublon. Vérifier HTTPS, mise à jour avec deux onglets, arrière-plan puis retour dans la PWA. La validation Chromium ne constitue pas une validation Samsung.
 
-En cas de retour arrière ultérieur, revenir au code/image PulSe précédent et au code/image LinKs précédent avec les mêmes variables, secrets et données. Aucun changement de schéma à annuler. Les liens créés restent des liens LinKs ordinaires : ne pas supprimer les liens ou tokens déjà partagés. Un retour de code ne restaure pas une destination modifiée volontairement ; la corriger explicitement dans LinKs si nécessaire. Ne pas retirer HTTP Basic ni les protections préparées en phase 4.
+En cas de retour arrière ultérieur, revenir au code/image PulSe précédent et au code/image LinKs précédent avec les mêmes variables, secrets et données. Aucun changement de schéma à annuler. Les liens créés restent des liens LinKs ordinaires : ne pas supprimer les liens ou tokens déjà partagés. Un retour de code ne restaure pas une destination modifiée volontairement ; la corriger explicitement dans LinKs si nécessaire. Conserver la frontière privée et le refus public préparés dans ACCES-PRIVE.md.

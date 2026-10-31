@@ -12,7 +12,7 @@ async function api(path,options={}){
  const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),12000);
  try{
   let r;try{r=await fetch(path,{cache:'no-store',...options,signal:controller.signal})}catch{throw Error('Connexion indisponible. Reconnectez Pangolin puis réessayez. Votre préparation reste dans cette page.')}
-  if(r.status===401||r.status===403)throw Error('Accès refusé. Vérifiez votre connexion privée et vos identifiants, puis réessayez.');
+  if(r.status===401||r.status===403)throw Error('Accès refusé. Vérifiez votre connexion privée et vos droits Pangolin, puis réessayez.');
   let data;try{data=await r.json()}catch{throw Error('Réponse indisponible. Vérifiez votre connexion privée puis réessayez.')}
   if(!r.ok)throw Error(data.error||'Connexion indisponible.');return data;
  }finally{clearTimeout(timeout)}
@@ -27,7 +27,7 @@ function syncDraft(){const url=selected?.link||'';prepared=!mediaBusy&&mediaFile
  $('media-state').textContent=mediaBusy?'Préparation…':mediaFile?'Visuel prêt':'Choix / préparation';$('copy-state').textContent=flow.copied?'Lien copié':url?'Lien prêt':'Lien en attente';$('share-state').textContent=flow.shared?'Partage effectué':flow.downloaded?'Import manuel à faire':'Après copie du lien';$('publish-state').textContent=flow.published?'Déclaration enregistrée':'À faire dans Instagram';
  $('publication-state').textContent=flow.published?'Terminée sur cet appareil':prepared?'Prête à publier':mediaFile?'Visuel prêt · lien en attente':'En préparation';const canFinish=!!prepared&&flow.copied&&states.share;$('publication-check').disabled=!canFinish||flow.published;$('confirm-publication').disabled=!canFinish||!$('publication-check').checked||flow.published;
 }
-let activeView='stats';
+let activeView='stories';
 const viewScroll={stats:0,stories:0,links:0};
 function showView(view,{fromHistory=false}={}){
  if(!['stats','stories','links'].includes(view)||view===activeView)return;
@@ -47,7 +47,7 @@ function showView(view,{fromHistory=false}={}){
 }
 history.replaceState({pulseView:activeView},'');
 history.scrollRestoration='manual';
-window.addEventListener('popstate',event=>showView(event.state?.pulseView||'stats',{fromHistory:true}));
+window.addEventListener('popstate',event=>showView(event.state?.pulseView||'stories',{fromHistory:true}));
 $('nav-stats').onclick=()=>showView('stats');$('nav-stories').onclick=()=>showView('stories');
 $('nav-links').onclick=()=>showView('links');
 $('story-create-link').onclick=()=>{linkManager.beginStory();showView('links')};

@@ -11,7 +11,7 @@ export function initLinkManager({onDraft,onSaved,onStoryLink,onStoryBack}){
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);
   try{
    const response=await fetch('/api/'+action,{method:body?'POST':'GET',cache:'no-store',signal:controller.signal,headers:body?{'Content-Type':'application/json','X-PulSe-Request':'1'}:{},body:body?JSON.stringify(body):undefined});
-   let result;try{result=await response.json()}catch{throw Error('Connexion privée ou authentification requise. Votre saisie est conservée.')}
+   let result;try{result=await response.json()}catch{throw Error('Connexion privée Pangolin requise. Votre saisie est conservée.')}
    if(!response.ok){const error=Error(result.error||'Connexion indisponible.');error.code=result.code;error.duplicates=result.duplicates;throw error}return result;
   }catch(error){if(error.name==='AbortError'||error instanceof TypeError)throw Error('Connexion indisponible. Votre saisie est conservée. Réessayez après reconnexion.');throw error}
   finally{clearTimeout(timer)}
@@ -26,8 +26,8 @@ export function initLinkManager({onDraft,onSaved,onStoryLink,onStoryBack}){
   if(!rows.length)root.append(node('p','Aucun lien correspondant.'));
   for(const row of rows){const card=node('article','');card.className='managed-link';const name=node('strong',row.name);name.title=row.name;name.id='managed-name-'+row.id;card.append(name);const actions=node('div','');actions.className='link-actions';
    const choices=forStory?[['Choisir pour ma Story',()=>useInStory(row)],['Modifier',()=>open(row)]]:[['Modifier',()=>open(row)],['Partager',()=>share(row)]];
-   for(const [label,handler] of choices){const b=node('button','');b.type='button';b.className='secondary quick-action';b.setAttribute('aria-label',label);b.setAttribute('aria-describedby',name.id);b.title=label+' · '+row.name;
-    const icon=document.createElementNS('http://www.w3.org/2000/svg','svg');icon.setAttribute('viewBox','0 0 24 24');icon.setAttribute('aria-hidden','true');const path=document.createElementNS(icon.namespaceURI,'path');path.setAttribute('d',label==='Modifier'?'M4 16v4h4L20 8l-4-4L4 16M13 7l4 4':label==='Partager'?'M12 16V3m-5 5 5-5 5 5M5 13v7h14v-7':'m5 12 4 4L19 6');icon.append(path);b.append(icon);b.onclick=handler;actions.append(b)}card.append(actions);root.append(card)}
+   for(const [label,handler] of choices){const b=node('button','');b.type='button';b.className='secondary quick-action';b.dataset.action=label==='Modifier'?'edit':label==='Partager'?'share':'choose';b.setAttribute('aria-label',label);b.setAttribute('aria-describedby',name.id);b.title=label+' · '+row.name;
+    const icon=document.createElementNS('http://www.w3.org/2000/svg','svg');icon.setAttribute('viewBox','0 0 24 24');icon.setAttribute('aria-hidden','true');const path=document.createElementNS(icon.namespaceURI,'path');path.setAttribute('d',label==='Modifier'?'M3 17.25V21h3.75L19.8 7.95l-3.75-3.75L3 17.25M14.6 5.65l3.75 3.75':label==='Partager'?'M18 5a2 2 0 1 0 0 .01M6 12a2 2 0 1 0 0 .01M18 19a2 2 0 1 0 0 .01M7.7 11l8.6-5M7.7 13l8.6 5':'m5 12 4 4L19 6');icon.append(path);b.append(icon);b.onclick=handler;actions.append(b)}card.append(actions);root.append(card)}
  }
  function storyMode(value){forStory=value;$('link-story-context').hidden=!value;renderList()}
  function useInStory(row,accepted=false){

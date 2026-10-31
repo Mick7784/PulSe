@@ -9,7 +9,7 @@ const {chromium}=require('playwright');
 (async()=>{
  const repo=process.env.LINKS_REPO;if(!repo)throw Error('LINKS_REPO must point to the real LinKs checkout. No mocked fallback.');
  const python=process.env.PYTHON_PATH||'python3',temp=await mkdtemp(join(tmpdir(),'pulse-links-'));
- const secret='integration-bridge-secret-'.repeat(3),password='integration-basic-password';
+ const secret='integration-bridge-secret-'.repeat(3);
  const container=process.env.LINKS_CONTAINER==='1'?require('./links-container.cjs')(repo,secret):null;
  const child=container?.child||spawn(python,[resolve(__dirname,'links-fixture.py'),resolve(repo),temp],{windowsHide:true,env:{...process.env,PULSE_BRIDGE_TOKEN:secret},stdio:['pipe','pipe','pipe']});
  let logs='',context,pulse;child.stderr.on('data',b=>logs+=b);const exit=new Promise(r=>child.once('exit',r));
@@ -28,17 +28,17 @@ const {chromium}=require('playwright');
    console.log('Running packaged LinKs engine:',fixture.engine,fixture.releaseId);
   }
   const {createPulseServer}=await import('../serve.mjs');
-  pulse=createPulseServer({user:'admin',password,bridgeToken:secret,linksURL:fixture.public,bridgeURL:fixture.bridge});
+  pulse=createPulseServer({bridgeToken:secret,linksURL:fixture.public,bridgeURL:fixture.bridge});
   await new Promise(r=>pulse.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+pulse.address().port;
-  const api=async(action,body)=>{const r=await fetch(base+'/api/'+action,{method:body?'POST':'GET',headers:{Authorization:'Basic '+Buffer.from('admin:'+password).toString('base64'),'Content-Type':'application/json','X-PulSe-Request':'1'},body:body?JSON.stringify(body):undefined});const text=await r.text();assert.ok(!text.includes(secret));return {status:r.status,data:JSON.parse(text)}};
-  for(const [path,method] of [['/api/link-manager','GET'],['/api/link-preview','POST'],['/api/link-save','POST'],['/api/link-token','POST'],['/link-manager.js','GET']])assert.equal((await fetch(base+path,{method})).status,401);
-  const csrf=await fetch(base+'/api/link-save',{method:'POST',headers:{Authorization:'Basic '+Buffer.from('admin:'+password).toString('base64'),'Content-Type':'application/json'},body:'{}'});assert.equal(csrf.status,403);
+  const api=async(action,body)=>{const r=await fetch(base+'/api/'+action,{method:body?'POST':'GET',headers:{'Content-Type':'application/json','X-PulSe-Request':'1'},body:body?JSON.stringify(body):undefined});const text=await r.text();assert.ok(!text.includes(secret));return {status:r.status,data:JSON.parse(text)}};
+  assert.equal((await fetch(base+'/api/link-manager')).status,200);
+  const csrf=await fetch(base+'/api/link-save',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});assert.equal(csrf.status,403);
   const initial=(await api('link-manager')).data;
   const source=platform=>initial.sources.find(s=>s.platform===platform).id;
   // Count a genuine pre-existing visit, then verify all management operations preserve it.
   assert.equal((await fetch(fixture.short,{redirect:'manual'})).status,302);
   const statsBefore=(await api('stats')).data;assert.ok(statsBefore.total>0);
-  context=await chromium.launchPersistentContext(join(temp,'chrome'),{headless:true,...(process.env.CHROMIUM_PATH?{executablePath:process.env.CHROMIUM_PATH}:{}),httpCredentials:{username:'admin',password},viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+  context=await chromium.launchPersistentContext(join(temp,'chrome'),{headless:true,...(process.env.CHROMIUM_PATH?{executablePath:process.env.CHROMIUM_PATH}:{}),viewport:{width:390,height:844},isMobile:true,hasTouch:true});
   await context.addInitScript(()=>Object.defineProperty(navigator,'clipboard',{value:{writeText:value=>window.denyClipboard?Promise.reject(Error('denied')):Promise.resolve(window.copiedLink=value)}}));
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('dialog',dialog=>dialog.accept());
   page.on('request',req=>assert.ok(!JSON.stringify(req.headers()).includes(secret),'Bearer must never reach the browser'));
@@ -103,7 +103,7 @@ const {chromium}=require('playwright');
   await require('./stories-integration.cjs')({page,context,api,fixture,control});
   await require('./multichannel-integration.cjs')({page,context,api,fixture});
   assert.deepEqual(errors,[]);
-  console.log('PASS REAL LinKs + PulSe + SQLite + Chromium: affiliation/manual/None, preview confirmation, create/edit, transaction duplicates and reuse, lost committed response, source tokens, legacy aliases/statistics, authentication, clipboard fallback, offline drafts, stale previews, mobile widths and no private cache. No physical Samsung test.');
+  console.log('PASS REAL LinKs + PulSe + SQLite + Chromium: affiliation/manual/None, preview confirmation, create/edit, transaction duplicates and reuse, lost committed response, source tokens, legacy aliases/statistics, bridge authorization, clipboard fallback, offline drafts, stale previews, mobile widths and no private cache. No physical Samsung test.');
  }finally{
   await context?.close();if(pulse)await new Promise(r=>pulse.close(r));
   child.stdin.end('\n');let timer;
